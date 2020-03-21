@@ -7,6 +7,7 @@ end
 
 GroupedFeatures(ps) = GroupedFeatures(ps, sum(ps), length(ps))
 
+ngroups(gr::GroupedFeatures) = gr.num_groups
 
 function group_idx(gr::GroupedFeatures, i::Integer)
     starts = cumsum([1;gr.ps])[1:end-1]
