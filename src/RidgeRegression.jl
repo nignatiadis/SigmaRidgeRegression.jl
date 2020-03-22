@@ -9,6 +9,9 @@ import StatsBase:fit!
 
 include("groupedfeatures.jl")
 include("blockridge.jl")
+include("variance_estimation.jl")
+include("end_to_end.jl")
+include("simulations.jl")
 
 export GroupedFeatures,
        ngroups,
@@ -24,7 +27,11 @@ export GroupedFeatures,
 	   loo_error,
 	   mse_ridge,
 	   σ_squared_max,
-	   sigma_squared_path
+	   sigma_squared_path,
+	   DickerMoments,
+	   estimate_var,
+	   whiten_covariates
+	   
 
 
 end # module
