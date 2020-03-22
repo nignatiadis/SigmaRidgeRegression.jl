@@ -1,5 +1,48 @@
-Base.@kwdef struct BasicGroupRidgeWorkspace{SYM<:Symmetric,
-                                C<:Cholesky,
+"""
+`AbstractRidgePredictor` is supposed to implement the interface
+* `update_λs!`
+* `trace_XtX`
+* `LinearAlgebra.ldiv!`
+* `Base.\`
+Concrete subtypes available are `CholeskyRidgePredictor` and
+`WoodburyRidgePredictor`.
+"""
+abstract type AbstractRidgePredictor end 
+
+struct CholeskyRidgePredictor{SYM<:Symmetric,
+                                C<:Cholesky} <: AbstractRidgePredictor
+   XtX::SYM
+   XtXpΛ::SYM
+   XtXpΛ_chol::C
+end
+
+function trace_XtX(chol::CholeskyRidgePredictor)
+    tr(chol.XtX)
+end 
+    
+function CholeskyRidgePredictor(X)
+    (n,p) = size(X)
+    XtX = Symmetric(X'*X ./n)
+    XtXpΛ = XtX + 1.0*I
+    XtXpΛ_chol = cholesky!(XtXpΛ)
+    CholeskyRidgePredictor(XtX, XtXpΛ, XtXpΛ_chol)
+end 
+
+function update_λs!(chol::CholeskyRidgePredictor, groups, λs)
+    chol.XtXpΛ .= Symmetric(chol.XtX + Diagonal(group_expand(groups, λs)))
+    cholesky!(chol.XtXpΛ)
+end
+
+function ldiv!(A, chol::CholeskyRidgePredictor, B)
+    ldiv!(A, chol.XtXpΛ_chol, B)
+end
+
+function \(chol::CholeskyRidgePredictor, B)
+   chol.XtXpΛ_chol \ B
+end
+
+
+Base.@kwdef struct BasicGroupRidgeWorkspace{CP<:AbstractRidgePredictor,
                                 M<:AbstractMatrix,
                                 V<:AbstractVector}
     X::M
@@ -8,15 +51,15 @@ Base.@kwdef struct BasicGroupRidgeWorkspace{SYM<:Symmetric,
     n::Integer = size(X,1)
     p::Integer = size(X,2)
     λs::V = ones(groups.num_groups)
-    XtX::SYM = Symmetric(X'*X ./n)
     XtY::V = X'*Y./n
-    XtXpΛ::SYM = XtX + 1.0*I
-    XtXpΛ_chol::C = cholesky!(XtXpΛ)
+    XtXpΛ_chol::CP = CholeskyRidgePredictor(X)
     XtXpΛ_div_Xt::M = XtXpΛ_chol\X'.\n
     β_curr::V = XtXpΛ_chol\XtY
     leverage_store::V = zeros(n)
     Y_hat::V = X*β_curr
 end
+
+
 
 ngroups(rdg::BasicGroupRidgeWorkspace) = ngroups(rdg.groups)
 
@@ -40,10 +83,10 @@ end
 
 
 function StatsBase.fit!(rdg::BasicGroupRidgeWorkspace, λs)
-    @show typeof(rdg.λs)
     rdg.λs .= λs
-    rdg.XtXpΛ .= Symmetric(rdg.XtX + Diagonal(group_expand(rdg.groups, λs)))
-    cholesky!(rdg.XtXpΛ)
+    update_λs!(rdg.XtXpΛ_chol, rdg.groups, λs)
+    #rdg.XtXpΛ .= Symmetric(rdg.XtX + Diagonal(group_expand(rdg.groups, λs)))
+    #cholesky!(rdg.XtXpΛ)
     ldiv!(rdg.β_curr, rdg.XtXpΛ_chol, rdg.XtY)
     mul!(rdg.Y_hat, rdg.X, rdg.β_curr)
     ldiv!(rdg.XtXpΛ_div_Xt, rdg.XtXpΛ_chol, rdg.X')
@@ -53,12 +96,12 @@ function StatsBase.fit!(rdg::BasicGroupRidgeWorkspace, λs)
 end
 
 function λωλας_λ(rdg; multiplier=0.1)
-   multiplier*rdg.p^2/rdg.n/tr(rdg.XtX)
+   multiplier*rdg.p^2/rdg.n/tr(rdg.XtXpΛ_chol.XtX) #TODO 2
 end
 
-function max_σ_squared(rdg)
-   mean(abs2, rdg.Y)
-end
+#function max_σ_squared(rdg)
+#   mean(abs2, rdg.Y)
+#end
 
 
 
@@ -85,7 +128,7 @@ function MomentTunerSetup(rdg::BasicGroupRidgeWorkspace)
     ngroups = grps.num_groups
     beta_norms_squared = group_summary(grps, rdg.β_curr, x->sum(abs2,x))
     N_matrix = rdg.XtXpΛ_div_Xt #sqrt(n)*N from paper
-    M_matrix = rdg.XtXpΛ_chol\rdg.XtX
+    M_matrix = rdg.XtXpΛ_chol\rdg.XtXpΛ_chol.XtX #TODO 1
     N_norms_squared = Vector{eltype(beta_norms_squared)}(undef, ngroups)
     M_squared = Matrix{eltype(beta_norms_squared)}(undef, ngroups, ngroups)
 
@@ -104,7 +147,7 @@ end
 function σ_squared_max(mom::MomentTunerSetup)
     u = mom.beta_norms_squared
     v = mom.N_norms_squared
-    max( u./ v)
+    maximum( u./ v)
 end
 
 function get_αs_squared(mom::MomentTunerSetup, σ_squared)
@@ -131,6 +174,10 @@ function sigma_squared_path(rdg::BasicGroupRidgeWorkspace,
     for (i, σ_squared) in enumerate(σs_squared)
         λs_tmp = get_λs(mom, σ_squared)
         @show λs_tmp
+        @show typeof(λs_tmp)
+        @show typeof(λs)
+        @show size(λs)
+
         λs[i,:] = λs_tmp
         loos_hat[i] = fit!(rdg, λs_tmp)
         βs[i,:] = rdg.β_curr

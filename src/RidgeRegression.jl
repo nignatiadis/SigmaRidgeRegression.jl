@@ -2,9 +2,12 @@ module RidgeRegression
 
 using LinearAlgebra
 using NonNegLeastSquares
+using Optim 
 using StatsBase
 
+import Base.\
 import Base:reduce, rand
+import LinearAlgebra:ldiv!
 import StatsBase:fit!
 
 include("groupedfeatures.jl")
@@ -19,6 +22,7 @@ export GroupedFeatures,
 	   group_summary,
 	   group_expand,
 	   random_betas,
+	   CholeskyRidgePredictor,
 	   BasicGroupRidgeWorkspace,
 	   MomentTunerSetup,
 	   get_αs_squared,
