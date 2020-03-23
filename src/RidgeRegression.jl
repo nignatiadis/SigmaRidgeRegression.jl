@@ -38,8 +38,14 @@ export GroupedFeatures,
 	   sigma_squared_path,
 	   DickerMoments,
 	   estimate_var,
-	   whiten_covariates
-	   
+	   whiten_covariates,
+	   NoiseLevelEstimator,
+	   SigmaLeaveOneOut,
+	   DickerMoments,
+	   AbstractRidgeTuning,
+	   SigmaRidgeTuning,
+	   OneParamCrossValRidgeTuning,
+	   MultiParamCrossValRidgeTuning
 
 
 end # module

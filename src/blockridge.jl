@@ -114,7 +114,7 @@ end
 
 function XtXpΛ_ldiv_XtX(wbpred::WoodburyRidgePredictor)
     n = size(wbpred.X, 1)
-    (wbpred.pdb\wbpred.X')*wbpred.X ./n
+    (wbpred.wdb\wbpred.X')*wbpred.X ./n
 end 
 
 function trace_XtX(wbpred::WoodburyRidgePredictor)
