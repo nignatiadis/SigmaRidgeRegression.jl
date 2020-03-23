@@ -4,12 +4,15 @@ using LinearAlgebra
 using NonNegLeastSquares
 using Optim 
 using StatsBase
+using WoodburyMatrices
 
 import Base.\
 import Base:reduce, rand
 import LinearAlgebra:ldiv!
 import StatsBase:fit!
+import WoodburyMatrices:_ldiv!
 
+include("utils.jl")
 include("groupedfeatures.jl")
 include("blockridge.jl")
 include("variance_estimation.jl")
@@ -23,6 +26,7 @@ export GroupedFeatures,
 	   group_expand,
 	   random_betas,
 	   CholeskyRidgePredictor,
+	   WoodburyRidgePredictor,
 	   BasicGroupRidgeWorkspace,
 	   MomentTunerSetup,
 	   get_αs_squared,

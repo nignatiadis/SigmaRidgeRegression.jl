@@ -8,6 +8,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 NonNegLeastSquares = "b7351bd1-99d9-5c5d-8786-f205a815c4d7"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+WoodburyMatrices = "efce3f68-66dc-5838-9240-27a6d6f5f9b6"
 
 [compat]
 julia = "1"

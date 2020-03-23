@@ -2,6 +2,7 @@
 `AbstractRidgePredictor` is supposed to implement the interface
 * `update_λs!`
 * `trace_XtX`
+* `XtXpΛ_ldiv_XtX`
 * `LinearAlgebra.ldiv!`
 * `Base.\`
 Concrete subtypes available are `CholeskyRidgePredictor` and
@@ -9,23 +10,25 @@ Concrete subtypes available are `CholeskyRidgePredictor` and
 """
 abstract type AbstractRidgePredictor end 
 
-struct CholeskyRidgePredictor{SYM<:Symmetric,
-                                C<:Cholesky} <: AbstractRidgePredictor
+"""
+Used typically for p < n.
+"""  
+struct CholeskyRidgePredictor{M<:AbstractMatrix,
+                              SYM<:Symmetric,
+                              C<:Cholesky} <: AbstractRidgePredictor
+   X::M
    XtX::SYM
    XtXpΛ::SYM
    XtXpΛ_chol::C
 end
 
-function trace_XtX(chol::CholeskyRidgePredictor)
-    tr(chol.XtX)
-end 
-    
+  
 function CholeskyRidgePredictor(X)
     (n,p) = size(X)
     XtX = Symmetric(X'*X ./n)
     XtXpΛ = XtX + 1.0*I
     XtXpΛ_chol = cholesky!(XtXpΛ)
-    CholeskyRidgePredictor(XtX, XtXpΛ, XtXpΛ_chol)
+    CholeskyRidgePredictor(X, XtX, XtXpΛ, XtXpΛ_chol)
 end 
 
 function update_λs!(chol::CholeskyRidgePredictor, groups, λs)
@@ -41,6 +44,84 @@ function \(chol::CholeskyRidgePredictor, B)
    chol.XtXpΛ_chol \ B
 end
 
+function XtXpΛ_ldiv_XtX(chol::CholeskyRidgePredictor)
+    chol.XtXpΛ_chol\chol.XtX
+end 
+
+function trace_XtX(chol::CholeskyRidgePredictor)
+    tr(chol.XtX)
+end 
+
+
+"""
+Used typically for p >> n and n reasonably small
+"""
+struct WoodburyRidgePredictor{M<:AbstractMatrix,
+                              S<:SymWoodbury} <: RidgeRegression.AbstractRidgePredictor
+   X::M
+   wdb::S
+end
+    
+function WoodburyRidgePredictor(X)
+    (n,p) = size(X)
+    wdb = SymWoodbury(1.0*I(p), X', I(n)/n)
+    WoodburyRidgePredictor(X, wdb)
+end
+ 
+
+#------------------------------------------------------------------------ 
+# TODO: Fix the following two things upstream on WoodburyMatrices.jl
+#------------------------------------------------------------------------
+function _ldiv!(dest, W::SymWoodbury, A::Diagonal, B)
+    WoodburyMatrices.myldiv!(W.tmpN1, A, B)
+    mul!(W.tmpk1, W.V, W.tmpN1)
+    mul!(W.tmpk2, W.Cp, W.tmpk1)
+    mul!(W.tmpN2, W.U, W.tmpk2)
+    WoodburyMatrices.myldiv!(A, W.tmpN2)
+    for i = 1:length(W.tmpN2)
+        @inbounds dest[i] = W.tmpN1[i] - W.tmpN2[i]
+    end
+    return dest
+end
+
+#-----------------------------------------------------------------------
+function ldiv!(Y::AbstractMatrix, A::SymWoodbury, B::AbstractMatrix)
+    ncols = size(B,2)
+    for i=1:ncols 
+        ldiv!(view(Y, :, i), A, view(B,:,i))
+    end
+    Y
+end
+#-----------------------------------------------------------------------
+
+function update_λs!(wbpred::WoodburyRidgePredictor, groups, λs)
+    wdb = wbpred.wdb
+    n = size(wdb.D,1)
+    A =  Diagonal(group_expand(groups, λs))
+    wdb.A .= A
+    wdb.Dp .= inv(n*I + wdb.B'*(A\wdb.B))
+end
+
+
+function ldiv!(A, wbpred::WoodburyRidgePredictor, B)
+    ldiv!(A, wbpred.wdb, B)
+end
+
+function \(wbpred::WoodburyRidgePredictor, B)
+   wbpred.wdb \ B
+end
+
+
+function XtXpΛ_ldiv_XtX(wbpred::WoodburyRidgePredictor)
+    n = size(wbpred.X, 1)
+    (wbpred.pdb\wbpred.X')*wbpred.X ./n
+end 
+
+function trace_XtX(wbpred::WoodburyRidgePredictor)
+    n = size(wbpred.X,1)
+    # recall XtX here really is XtX/n
+    tr(wbpred.X'*wbpred.X)/n #make more efficient later.
+end 
 
 Base.@kwdef struct BasicGroupRidgeWorkspace{CP<:AbstractRidgePredictor,
                                 M<:AbstractMatrix,
@@ -63,15 +144,7 @@ end
 
 ngroups(rdg::BasicGroupRidgeWorkspace) = ngroups(rdg.groups)
 
-function _prod_diagonals!(Y, A, B)
-    @inbounds for j ∈ 1:size(A,1)
-        Y[j] = 0
-        @inbounds for i ∈ 1:size(A,2)
-            Y[j] += A[j,i]*B[i,j]
-        end
-    end
-    Y
-end
+
 
 function loo_error(rdg::BasicGroupRidgeWorkspace)
     mean(abs2.((rdg.Y .- rdg.Y_hat)./ ( 1.0 .- rdg.leverage_store)))
@@ -95,8 +168,9 @@ function StatsBase.fit!(rdg::BasicGroupRidgeWorkspace, λs)
     loo_error(rdg)
 end
 
+
 function λωλας_λ(rdg; multiplier=0.1)
-   multiplier*rdg.p^2/rdg.n/tr(rdg.XtXpΛ_chol.XtX) #TODO 2
+   multiplier*rdg.p^2/rdg.n/trace_XtX(rdg.XtXpΛ_chol) #TODO 2s
 end
 
 #function max_σ_squared(rdg)
@@ -128,7 +202,7 @@ function MomentTunerSetup(rdg::BasicGroupRidgeWorkspace)
     ngroups = grps.num_groups
     beta_norms_squared = group_summary(grps, rdg.β_curr, x->sum(abs2,x))
     N_matrix = rdg.XtXpΛ_div_Xt #sqrt(n)*N from paper
-    M_matrix = rdg.XtXpΛ_chol\rdg.XtXpΛ_chol.XtX #TODO 1
+    M_matrix =  XtXpΛ_ldiv_XtX(rdg.XtXpΛ_chol) #TODO 1
     N_norms_squared = Vector{eltype(beta_norms_squared)}(undef, ngroups)
     M_squared = Matrix{eltype(beta_norms_squared)}(undef, ngroups, ngroups)
 
@@ -173,11 +247,6 @@ function sigma_squared_path(rdg::BasicGroupRidgeWorkspace,
     βs = zeros(n_σs, rdg.groups.p)
     for (i, σ_squared) in enumerate(σs_squared)
         λs_tmp = get_λs(mom, σ_squared)
-        @show λs_tmp
-        @show typeof(λs_tmp)
-        @show typeof(λs)
-        @show size(λs)
-
         λs[i,:] = λs_tmp
         loos_hat[i] = fit!(rdg, λs_tmp)
         βs[i,:] = rdg.β_curr
