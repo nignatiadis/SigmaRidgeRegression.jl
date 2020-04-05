@@ -1,4 +1,4 @@
-module RidgeRegression
+module SigmaRidgeRegression
 
 using LinearAlgebra
 using NonNegLeastSquares

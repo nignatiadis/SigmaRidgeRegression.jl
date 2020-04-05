@@ -57,7 +57,7 @@ end
 Used typically for p >> n and n reasonably small
 """
 struct WoodburyRidgePredictor{M<:AbstractMatrix,
-                              S<:SymWoodbury} <: RidgeRegression.AbstractRidgePredictor
+                              S<:SymWoodbury} <: SigmaRidgeRegression.AbstractRidgePredictor
    X::M
    wdb::S
 end
@@ -69,6 +69,21 @@ function WoodburyRidgePredictor(X)
 end
  
 
+#Hi Tim,
+
+#It would be very useful if there could be an implementation of
+#```julia
+#ldiv!(dest::AbstracMatrix, W::AbstractWoodbury, B::AbstractMatrix)
+#```
+#Right now I think this only works with `AbstractVector`. Before implementing and filing a pull request, I was wondering whether you think it is an OK approach to 
+
+#```julia
+# for i=1:ncols 
+#      ldiv!(view(dest, :, i), A, view(B,:,i))
+#end
+#```
+
+Thank you!
 #------------------------------------------------------------------------ 
 # TODO: Fix the following two things upstream on WoodburyMatrices.jl
 #------------------------------------------------------------------------

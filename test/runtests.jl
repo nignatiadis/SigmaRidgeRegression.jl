@@ -1,4 +1,4 @@
-using RidgeRegression
+using SigmaRidgeRegression
 using Test
 using LinearAlgebra
 using Random

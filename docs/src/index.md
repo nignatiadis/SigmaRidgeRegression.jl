@@ -1,8 +1,8 @@
-# RidgeRegression.jl
+# SigmaRidgeRegression.jl
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [RidgeRegression]
+Modules = [SigmaRidgeRegression]
 ```

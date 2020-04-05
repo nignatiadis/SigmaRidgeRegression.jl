@@ -1,4 +1,4 @@
-using RidgeRegression
+using SigmaRidgeRegression
 using LinearAlgebra
 using StatsBase
 using Plots
@@ -33,10 +33,13 @@ tmp = BasicGroupRidgeWorkspace(X=X, Y=Y, groups=grp)
 fit!(tmp, λωλας_λ(tmp))
 
 mom = MomentTunerSetup(tmp)
-#scatter( αs.^2, RidgeRegression.get_αs_squared(mom,1.0))
+#scatter( αs.^2, SigmaRidgeRegression.get_αs_squared(mom,1.0))
 #plot!(αs.^2,αs.^2)
 σs_squared1 = range(0.0, 34; length=200)
 mypath1 = sigma_squared_path(tmp, mom, σs_squared1)
+
+#with gr
+#plot(sqrt.(σs_squared1), mypath1.loos)
 pl_left = plot(sqrt.(σs_squared1), mypath1.λs, legend=:topleft, color=main_cols, 
             linestyle=[ :dot :dashdot :dash], xlab=L"\sigmacv",
 			ylab=L"\hat{\lambda}(\sigmacv)",
@@ -65,8 +68,8 @@ pl_left_tree = plot(sqrt.(σs_squared2), mypath2.λs,
 pl_right_tree = plot(sqrt.(σs_squared2), mypath2.βs, alpha=0.6, 
                   linewidth=0.5,
                   label="", 
-				  ylab= "",# L"\hat{\beta}(\hat{\lambda}(\sigmacv))",
-				  xlab="", #L"\sigmacv",
+				  ylab= L"\hat{w}(\hat{\lambda}(\sigmacv))",
+				  xlab=L"\sigmacv",
 			      color=four_cols_rep, ylim=(-2.2,2.2))
 
 pl_both_tree = plot(pl_left_tree,pl_right_tree, 

@@ -4,7 +4,7 @@ using CategoricalArrays
 using GLM
 using Distributions
 
-using RidgeRegression
+using SigmaRidgeRegression
 using LinearAlgebra
 using StatsBase
 using Plots
@@ -23,6 +23,7 @@ using ForwardDiff
 σ = 5.0
 #gr = GroupedFeatures(repeat([200],5))
 Random.seed!(1)
+σ = 5.0
 grp = GroupedFeatures([30;30;30;30;30;30])
 n = 400
 p = grp.p
@@ -55,15 +56,11 @@ using StatsBase
 StatsBase.fit!(tmp, λωλας_λ(tmp))
 mom = MomentTunerSetup(tmp)
 
-function tune_σ(σ)
-    λ_σ = get_λs(mom, σ^2)
-    fit!(tmp, λ_σ)
-end
+
 
 tune_σ(1.0)
-RidgeRegression.
+SigmaRidgeRegression.
 
-opt_res = optimize(tune_σ, 0.0, sqrt(σ_squared_max(mom)), GoldenSection())
 
 min1 = opt_res.minimizer
 lambda_min1 = get_λs(mom, min1)
@@ -106,7 +103,7 @@ oracle_λ = σ^2 ./ αs.^2 .* 30 ./ n
 using Optim
 
 using Plots
-scatter( αs.^2, RidgeRegression.get_αs_squared(mom,1.0))
+scatter( αs.^2, SigmaRidgeRegression.get_αs_squared(mom,1.0))
 plot!(αs.^2,αs.^2)
 σs_squared = range(0.01, 3.0; length=100)
 mypath1 = sigma_squared_path(tmp, mom, σs_squared)
@@ -433,3 +430,32 @@ Dp = safeinv(safeinv(D) .+ B'*(A\B))
 
 
 
+Random.seed!(100)
+σ = 4.0
+grp = GroupedFeatures([300;3000;5000])
+n = 400
+p = grp.p
+
+
+X = randn(n, p)# * Σ_chol.UL
+
+αs = sqrt.([4.0;8.0;12.0])#r#ange(2.0, 2.75, 3.5; length=3)#1.0:5.0
+β = random_betas(grp, αs)
+group_summary(grp, β, norm)
+sum(abs2, β)
+Y = X*β .+ σ .* randn(n)
+
+tmp = BasicGroupRidgeWorkspace(X=X, Y=Y, groups=grp,
+                              XtXpΛ_chol = WoodburyRidgePredictor(X))
+fit!(tmp, λωλας_λ(tmp))
+
+mom = MomentTunerSetup(tmp)
+#scatter( αs.^2, SigmaRidgeRegression.get_αs_squared(mom,1.0))
+#plot!(αs.^2,αs.^2)
+σs_squared1 = range(0.0001, 34; length=30)
+mypath1 = sigma_squared_path(tmp, mom, σs_squared1)
+
+#with gr
+plot(sqrt.(σs_squared1), mypath1.loos)
+
+get_λs(mom, 4)
