@@ -1,5 +1,8 @@
 # SigmaRidgeRegression
 
+![img](sigmaridge_logo.png)
+
+
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://nignatiadis.github.io/SigmaRidgeRegression.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://nignatiadis.github.io/SigmaRidgeRegression.jl/dev)
 [![Build Status](https://travis-ci.com/nignatiadis/SigmaRidgeRegression.jl.svg?branch=master)](https://travis-ci.com/nignatiadis/SigmaRidgeRegression.jl)
