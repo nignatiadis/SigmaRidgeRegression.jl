@@ -82,8 +82,6 @@ end
 #      ldiv!(view(dest, :, i), A, view(B,:,i))
 #end
 #```
-
-Thank you!
 #------------------------------------------------------------------------ 
 # TODO: Fix the following two things upstream on WoodburyMatrices.jl
 #------------------------------------------------------------------------
@@ -153,6 +151,7 @@ Base.@kwdef struct BasicGroupRidgeWorkspace{CP<:AbstractRidgePredictor,
     β_curr::V = XtXpΛ_chol\XtY
     leverage_store::V = zeros(n)
     Y_hat::V = X*β_curr
+    cache = nothing
 end
 
 
@@ -184,6 +183,11 @@ function StatsBase.fit!(rdg::BasicGroupRidgeWorkspace, λs)
 end
 
 
+"""
+    λωλας_λ(rdg; multiplier=0.1)
+    
+Implements the Panagiotis Lolas rule of thumb for picking an optimal λ.    
+"""
 function λωλας_λ(rdg; multiplier=0.1)
    multiplier*rdg.p^2/rdg.n/trace_XtX(rdg.XtXpΛ_chol) #TODO 2s
 end

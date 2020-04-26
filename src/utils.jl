@@ -7,3 +7,8 @@ function _prod_diagonals!(Y, A, B)
     end
     Y
 end
+
+function random_rotation(p)
+	mat = randn(p,p)
+	qr(mat).Q
+end

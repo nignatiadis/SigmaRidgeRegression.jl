@@ -1,8 +1,11 @@
 module SigmaRidgeRegression
 
+using BlockDiagonals
+using Distributions
 using LinearAlgebra
 using NonNegLeastSquares
 using Optim 
+using Setfield
 using StatsBase
 using WoodburyMatrices
 
@@ -17,6 +20,7 @@ include("groupedfeatures.jl")
 include("blockridge.jl")
 include("variance_estimation.jl")
 include("end_to_end.jl")
+include("covariance_design.jl")
 include("simulations.jl")
 
 export GroupedFeatures,
@@ -45,7 +49,15 @@ export GroupedFeatures,
 	   AbstractRidgeTuning,
 	   SigmaRidgeTuning,
 	   OneParamCrossValRidgeTuning,
-	   MultiParamCrossValRidgeTuning
+	   MultiParamCrossValRidgeTuning,
+	   CovarianceDesign,
+	   nfeatures,
+	   get_Σ,
+	   spectrum,
+	   simulate_rotated_design,
+	   AR1Design,
+	   DiagonalCovarianceDesign,
+	   ExponentialOrderStatsCovarianceDesign
 
 
 end # module
