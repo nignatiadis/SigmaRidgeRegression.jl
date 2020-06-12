@@ -19,12 +19,13 @@ function fit!(rdg::BasicGroupRidgeWorkspace,
 		fit!(rdg, λ_σ)
 	end
 	
-	opt_res = optimize(_tune, 1e-10, sqrt(σ_squared_max(mom)), 
+	opt_res = optimize(_tune, 1e-7, sqrt(σ_squared_max(mom)), 
 	                   tune.noiseestimator.optimizer)
 	σ = opt_res.minimizer
 	λs = get_λs(mom, σ^2)
 	params = (σ = σ, λs = λs)
-	(params = params, opt_res = opt_res)
+	rdg.cache = (params = params, opt_res = opt_res, tune=tune)
+	rdg
 end
 
 
@@ -42,11 +43,12 @@ function fit!(rdg::BasicGroupRidgeWorkspace, tune::OneParamCrossValRidgeTuning)
 	function _tune(λ) # \lambda is 1-dimensional
 	    fit!(rdg, λ)
 	end
-	λ_min = 1e-7
+	λ_min = 1e-6
 	λ_max = 1e3
 	opt_res = optimize(_tune, λ_min, λ_max, tune.optimizer)
 	λ = opt_res.minimizer
-	(params = λ, opt_res = opt_res)
+	rdg.cache = (params = λ, opt_res = opt_res, tune=tune)
+	rdg
 end 
 
 
@@ -67,10 +69,9 @@ function fit!(rdg::BasicGroupRidgeWorkspace, tune::MultiParamCrossValRidgeTuning
 
 	logλ_init = clamp.(log.(rdg.λs), -10.0, 10.0)
 	opt_res = optimize(_tune, logλ_init,  tune.optimizer)
-
 	λs = exp.(opt_res.minimizer)
-
-	(params = λs, opt_res = opt_res)
+	rdg.cache = (params = λs, opt_res = opt_res, tune=tune)
+	rdg
 end 
 
 

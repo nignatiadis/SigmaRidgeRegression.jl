@@ -136,7 +136,7 @@ function trace_XtX(wbpred::WoodburyRidgePredictor)
     tr(wbpred.X'*wbpred.X)/n #make more efficient later.
 end 
 
-Base.@kwdef struct BasicGroupRidgeWorkspace{CP<:AbstractRidgePredictor,
+Base.@kwdef mutable struct BasicGroupRidgeWorkspace{CP<:AbstractRidgePredictor,
                                 M<:AbstractMatrix,
                                 V<:AbstractVector}
     X::M
