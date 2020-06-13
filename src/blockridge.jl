@@ -158,6 +158,9 @@ end
 
 ngroups(rdg::BasicGroupRidgeWorkspace) = ngroups(rdg.groups)
 
+# StatsBase.jl interace 
+coef(rdg::BasicGroupRidgeWorkspace) = rdg.β_curr
+leverage(rdg::BasicGroupRidgeWorkspace) = rdg.leverage_store
 
 
 function loo_error(rdg::BasicGroupRidgeWorkspace)

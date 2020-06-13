@@ -5,6 +5,7 @@ using Distributions
 using LinearAlgebra
 using NonNegLeastSquares
 using Optim 
+using RCall
 using Setfield
 using StatsBase
 using WoodburyMatrices
@@ -12,7 +13,7 @@ using WoodburyMatrices
 import Base.\
 import Base:reduce, rand
 import LinearAlgebra:ldiv!
-import StatsBase:fit!
+import StatsBase:fit!,fit, coef, leverage
 import WoodburyMatrices:_ldiv!
 
 include("utils.jl")
@@ -22,6 +23,7 @@ include("variance_estimation.jl")
 include("end_to_end.jl")
 include("covariance_design.jl")
 include("simulations.jl")
+include("r_wrapper.jl")
 
 export GroupedFeatures,
        ngroups,
@@ -46,6 +48,7 @@ export GroupedFeatures,
 	   NoiseLevelEstimator,
 	   SigmaLeaveOneOut,
 	   DickerMoments,
+	   GroupRidgeRegression,
 	   AbstractRidgeTuning,
 	   SigmaRidgeTuning,
 	   OneParamCrossValRidgeTuning,
