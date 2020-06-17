@@ -15,7 +15,7 @@ using WoodburyMatrices
 import Base.\
 import Base:reduce, rand
 import LinearAlgebra:ldiv!
-import StatsBase:fit!,fit, coef, islinear, leverage, modelmatrix, response
+import StatsBase:fit!,fit, coef, islinear, leverage, modelmatrix, response, predict
 import WoodburyMatrices:_ldiv!
 
 include("utils.jl")

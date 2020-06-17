@@ -163,6 +163,7 @@ coef(rdg::BasicGroupRidgeWorkspace) = rdg.β_curr
 islinear(rdg::BasicGroupRidgeWorkspace) = true
 leverage(rdg::BasicGroupRidgeWorkspace) = rdg.leverage_store
 modelmatrix(rdg::BasicGroupRidgeWorkspace) = rdg.X
+predict(rdg::BasicGroupRidgeWorkspace, X) = X*coef(rdg)
 response(rdg::BasicGroupRidgeWorkspace) = rdg.Y
 
 

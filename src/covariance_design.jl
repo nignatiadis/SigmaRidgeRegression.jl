@@ -42,7 +42,7 @@ Base.@kwdef struct IdentityCovarianceDesign{P<:Union{Missing,Int}} <: DiagonalCo
 end
 
 function get_Σ(cov::IdentityCovarianceDesign{Int})
-	I(Σ.p)
+	I(cov.p)
 end
 
 Base.@kwdef struct ExponentialOrderStatsCovarianceDesign{P<:Union{Missing,Int}} <: DiagonalCovarianceDesign{P}

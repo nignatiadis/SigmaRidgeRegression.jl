@@ -21,24 +21,28 @@ function r_squared(hs, γs, αs, λs)
 end
 
 
-
 function optimal_r_squared(αs, γs, hs)
 	λs_opt = γs ./ αs.^2
 	r_squared(hs, γs, αs, λs_opt)
 end
 
-function optimal_risk(αs, γs, hs)
-	λs_opt = min.( γs ./ αs.^2, 10_000)
+
+function optimal_λs(γs, αs)
+	  γs ./ αs.^2
+end 
+
+function optimal_risk(hs, γs, αs)
+	λs_opt = min.( optimal_λs(γs, αs), 10_000)
 	risk_formula(hs, γs, αs, λs_opt)
 end
 
-function optimal_single_λ_risk(αs, γs, hs)
+function optimal_single_λ_risk(hs, γs, αs)
 	λ_opt = sum(γs)/sum(abs2, αs)
 	λs_opt = fill(λ_opt, 2)
 	risk_formula(hs, γs, αs, λs_opt)
 end
 
-function optimal_ignore_second_group_risk(αs, γs, hs)
+function optimal_ignore_second_group_risk(hs, γs, αs)
 	λ1_opt = γs[1]*(1+αs[2]^2)/αs[1]^2
 	λs_opt = [λ1_opt ; 10_000]
 	risk_formula(hs, γs, αs, λs_opt)
