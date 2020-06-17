@@ -37,6 +37,13 @@ end
 
 abstract type DiagonalCovarianceDesign{T} <: CovarianceDesign{T} end 
 
+Base.@kwdef struct IdentityCovarianceDesign{P<:Union{Missing,Int}} <: DiagonalCovarianceDesign{P}
+	p::P = missing
+end
+
+function get_Σ(cov::IdentityCovarianceDesign{Int})
+	I(Σ.p)
+end
 
 Base.@kwdef struct ExponentialOrderStatsCovarianceDesign{P<:Union{Missing,Int}} <: DiagonalCovarianceDesign{P}
 	p::P = missing

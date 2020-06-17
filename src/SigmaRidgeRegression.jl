@@ -13,7 +13,7 @@ using WoodburyMatrices
 import Base.\
 import Base:reduce, rand
 import LinearAlgebra:ldiv!
-import StatsBase:fit!,fit, coef, leverage
+import StatsBase:fit!,fit, coef, islinear, leverage, modelmatrix, response
 import WoodburyMatrices:_ldiv!
 
 include("utils.jl")
@@ -60,7 +60,12 @@ export GroupedFeatures,
 	   simulate_rotated_design,
 	   AR1Design,
 	   DiagonalCovarianceDesign,
-	   ExponentialOrderStatsCovarianceDesign
+	   IdentityCovarianceDesign,
+	   ExponentialOrderStatsCovarianceDesign,
+	   simulate,
+	   GroupRidgeSimulationSettings,
+	   RandomLinearResponseModel
+
 
 
 end # module
