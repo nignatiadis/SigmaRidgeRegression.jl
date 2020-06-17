@@ -160,7 +160,10 @@ ngroups(rdg::BasicGroupRidgeWorkspace) = ngroups(rdg.groups)
 
 # StatsBase.jl interace 
 coef(rdg::BasicGroupRidgeWorkspace) = rdg.β_curr
+islinear(rdg::BasicGroupRidgeWorkspace) = true
 leverage(rdg::BasicGroupRidgeWorkspace) = rdg.leverage_store
+modelmatrix(rdg::BasicGroupRidgeWorkspace) = rdg.X
+response(rdg::BasicGroupRidgeWorkspace) = rdg.Y
 
 
 function loo_error(rdg::BasicGroupRidgeWorkspace)
