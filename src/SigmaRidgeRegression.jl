@@ -2,10 +2,12 @@ module SigmaRidgeRegression
 
 using BlockDiagonals
 using Distributions
+using FiniteDifferences
 using LinearAlgebra
 using NonNegLeastSquares
 using Optim 
 using RCall
+using Roots
 using Setfield
 using StatsBase
 using WoodburyMatrices
@@ -24,6 +26,7 @@ include("end_to_end.jl")
 include("covariance_design.jl")
 include("simulations.jl")
 include("r_wrapper.jl")
+include("theoretical_risk_curves.jl")
 
 export GroupedFeatures,
        ngroups,
@@ -64,8 +67,10 @@ export GroupedFeatures,
 	   ExponentialOrderStatsCovarianceDesign,
 	   simulate,
 	   GroupRidgeSimulationSettings,
-	   RandomLinearResponseModel
-
-
-
+	   RandomLinearResponseModel,
+	   optimal_risk,
+	   optimal_single_λ_risk,
+	   optimal_ignore_second_group_risk
+	   
+	   
 end # module
