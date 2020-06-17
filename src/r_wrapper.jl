@@ -51,4 +51,9 @@ Base.@kwdef struct MGCVTuning <: AbstractRidgeTuning
   method::String = "REML"
 end 
   
- 
+function fit!(rdg::BasicGroupRidgeWorkspace, tune::MGCVTuning)
+  r_res = mgcv(rdg.X, rdg.Y, rdg.groups; method=tune.method)
+  fit!(rdg, r_res.λs)
+  rdg.cache = r_res
+  rdg
+end 
