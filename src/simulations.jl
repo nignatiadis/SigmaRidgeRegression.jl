@@ -21,8 +21,8 @@ Base.@kwdef struct GroupRidgeSimulationSettings{C, R}
 	response_model::R
 	response_noise = Normal()
 	σ::Float64 = 1.0
-	ntest::Int
-	ntrain::Int = 10000
+	ntest::Int = 10000
+	ntrain::Int 
 	iid_measure = Normal()
 end
 

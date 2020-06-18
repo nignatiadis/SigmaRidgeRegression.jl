@@ -1,16 +1,21 @@
 
 function fixed_point_function(hs, γs, λs)
 	γ = sum(γs)
+	active_components = λs .< Inf
+	γs =  
 	fixed_point_f = f -> f - sum( γs./γ./(λs./hs .+ 1 ./(1 .+ γ*f))  )
 	find_zero(fixed_point_f, (0.0, 100.0))
 end
 
 
 function risk_formula(hs, γs, αs, λs)
+	λs = min.(λs, 10_000) #hack for now until properly dealing with Infinity
 	γ = sum(γs)
 	fixed_pt = λs_tilde -> fixed_point_function(hs, γs, λs_tilde)
 	f = fixed_pt(λs)
 	∇f = grad(central_fdm(5, 1), fixed_pt, λs)[1]
+	#return ∇f
+	#return γ ./ γs .* (γs .* λs - αs.^2 .* λs.^2) .* ∇f
 	1 +	γ*f + sum(γ ./ γs .* (γs .* λs - αs.^2 .* λs.^2) .* ∇f)
 end
 
@@ -32,18 +37,26 @@ function optimal_λs(γs, αs)
 end 
 
 function optimal_risk(hs, γs, αs)
-	λs_opt = min.( optimal_λs(γs, αs), 10_000)
+	λs_opt = optimal_λs(γs, αs)
 	risk_formula(hs, γs, αs, λs_opt)
 end
+
+function optimal_single_λ(γs, αs)
+	λ_opt = sum(γs)/sum(abs2, αs)
+  	λs_opt = fill(λ_opt, 2)
+end 
 
 function optimal_single_λ_risk(hs, γs, αs)
-	λ_opt = sum(γs)/sum(abs2, αs)
-	λs_opt = fill(λ_opt, 2)
+	λs_opt = optimal_single_λ(γs, αs)
 	risk_formula(hs, γs, αs, λs_opt)
 end
 
-function optimal_ignore_second_group_risk(hs, γs, αs)
+function optimal_ignore_second_group_λs(γs, αs)
 	λ1_opt = γs[1]*(1+αs[2]^2)/αs[1]^2
-	λs_opt = [λ1_opt ; 10_000]
+	λs_opt = [λ1_opt ; Inf]
+end 
+
+function optimal_ignore_second_group_risk(hs, γs, αs)
+	λs_opt = optimal_ignore_second_group_λs(γs, αs)
 	risk_formula(hs, γs, αs, λs_opt)
 end
