@@ -9,7 +9,7 @@ function multiridge(X, Y, grp)
   R"library(multiridge)"
   R"Xomics <- createXblocks(Xst)"
   R"XXomics <- createXXblocks(Xst)"
-  R"cvperblock <- fastCV(Xomics,Y=Y,kfold=10,fixedfolds = TRUE, model='linear')"
+  R"cvperblock <- fastCV(Xomics,Y=Y,kfold=10, intercept=FALSE, fixedfolds = TRUE, model='linear')"
   R"lambdas <- cvperblock$lambdas"
   R"lambdas" 
   R"leftout <- CVfolds(Y=Y,kfold=10,nrepeat=2,fixedfolds = TRUE, model='linear')"
@@ -51,9 +51,9 @@ Base.@kwdef struct MGCVTuning <: AbstractRidgeTuning
   method::String = "REML"
 end 
   
-function fit!(rdg::BasicGroupRidgeWorkspace, tune::MGCVTuning)
+function StatsBase.fit!(rdg::BasicGroupRidgeWorkspace, tune::MGCVTuning)
   r_res = mgcv(rdg.X, rdg.Y, rdg.groups; method=tune.method)
-  fit!(rdg, r_res.λs)
+  StatsBase.fit!(rdg, r_res.λs)
   rdg.cache = r_res
   rdg
 end 

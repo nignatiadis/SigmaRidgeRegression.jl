@@ -1,19 +1,21 @@
-Base.@kwdef struct GroupRidgeRegression{T} 
+abstract type AbstractGroupRidgeRegressor <: MMI.Deterministic end
+
+Base.@kwdef struct GroupRidgeRegression{T} <: AbstractGroupRidgeRegressor
 	decomposition::Symbol = :default 
-	tuning::T
+	λ::T
 end
 
-function fit(grp_ridge::GroupRidgeRegression, X, Y, grp::GroupedFeatures)
+function StatsBase.fit(grp_ridge::AbstractGroupRidgeRegressor, X, Y, grp::GroupedFeatures)
 	decomposition = grp_ridge.decomposition
-	tuning = grp_ridge.tuning
+	tuning = grp_ridge.λ
 	if decomposition == :default || decomposition == :cholesky 
 		pred = CholeskyRidgePredictor(X)
 	elseif decomposition == :woodbury
-		pred = WoodburyRidgePredictor(X_cll_centered)
+		pred = WoodburyRidgePredictor(X)
 	end 
 	workspace = BasicGroupRidgeWorkspace(X=X, Y=Y, groups=grp, XtXpΛ_chol = pred)
 	
-	fit!(workspace, tuning)
+	StatsBase.fit!(workspace, tuning)
 	workspace
 end 
 
@@ -29,15 +31,15 @@ Base.@kwdef struct OneParamCrossValRidgeTuning{O} <: AbstractRidgeTuning
 	optimizer::O = GoldenSection()
 end
 
-function fit!(rdg::BasicGroupRidgeWorkspace, tune::OneParamCrossValRidgeTuning)
+function StatsBase.fit!(rdg::BasicGroupRidgeWorkspace, tune::OneParamCrossValRidgeTuning)
 	function _tune(λ) # \lambda is 1-dimensional
-	    fit!(rdg, λ)
+	    StatsBase.fit!(rdg, λ)
 	end
 	λ_min = 1e-6
 	λ_max = 1e3
 	opt_res = optimize(_tune, λ_min, λ_max, tune.optimizer)
 	λ = opt_res.minimizer
-	fit!(rdg, λ)
+	StatsBase.fit!(rdg, λ)
 	rdg.cache = (params = λ, opt_res = opt_res, tune=tune)
 	rdg
 end 
@@ -50,14 +52,14 @@ Base.@kwdef struct SigmaRidgeTuning{O,T} <: AbstractRidgeTuning
 
 end 
 
-function fit!(rdg::BasicGroupRidgeWorkspace, 
+function StatsBase.fit!(rdg::BasicGroupRidgeWorkspace, 
 	          tune::SigmaRidgeTuning{<:SigmaLeaveOneOut})
-	fit!(rdg, tune.initializer)
+	StatsBase.fit!(rdg, tune.initializer)
 	mom = MomentTunerSetup(rdg)
 	fit!(rdg, mom, tune)
 end 
 
-function fit!(rdg::BasicGroupRidgeWorkspace, 
+function StatsBase.fit!(rdg::BasicGroupRidgeWorkspace, 
 	          mom::MomentTunerSetup,
 	          tune::SigmaRidgeTuning{<:SigmaLeaveOneOut})
 
@@ -86,10 +88,10 @@ Base.@kwdef struct MultiParamCrossValRidgeTuning{O} <: AbstractRidgeTuning
 	optimizer::O = LBFGS()
 end 
 
-function fit!(rdg::BasicGroupRidgeWorkspace, tune::MultiParamCrossValRidgeTuning)
+function StatsBase.fit!(rdg::BasicGroupRidgeWorkspace, tune::MultiParamCrossValRidgeTuning)
 	
 	function _tune(logλ)
-	    fit!(rdg, exp.(logλ))
+	    StatsBase.fit!(rdg, exp.(logλ))
 	end
 
 	logλ_init = clamp.(log.(rdg.λs), -10.0, 10.0)

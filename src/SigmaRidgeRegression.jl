@@ -2,8 +2,14 @@ module SigmaRidgeRegression
 
 using BlockDiagonals
 using Distributions
+using FillArrays #not used yet
 using FiniteDifferences
 using LinearAlgebra
+import MLJModelInterface
+const MMI = MLJModelInterface
+import MLJ 
+import MLJTuning
+
 using NonNegLeastSquares
 using Optim 
 using RCall
@@ -27,6 +33,7 @@ include("covariance_design.jl")
 include("simulations.jl")
 include("r_wrapper.jl")
 include("theoretical_risk_curves.jl")
+include("mmi.jl")
 
 export GroupedFeatures,
        ngroups,
@@ -70,7 +77,9 @@ export GroupedFeatures,
 	   RandomLinearResponseModel,
 	   optimal_risk,
 	   optimal_single_λ_risk,
-	   optimal_ignore_second_group_risk
+	   optimal_ignore_second_group_risk,
+	   SingleGroupRidgeRegressor,
+	   LooCVRidgeRegressor
 	   
 	   
 end # module

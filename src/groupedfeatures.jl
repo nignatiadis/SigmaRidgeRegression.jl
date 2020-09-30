@@ -1,6 +1,12 @@
 
-struct GroupedFeatures
-    ps::Vector{Int}
+"""
+    GroupedFeatures(ps::AbstractVector{Int})
+
+A type representing groups of features, wherein the first `ps[1]` features are one group,
+    the next `ps[2]` features are the second group and so forth.
+"""
+struct GroupedFeatures{IV<:AbstractVector{Int}}
+    ps::IV
     p::Int
     num_groups::Int
 end

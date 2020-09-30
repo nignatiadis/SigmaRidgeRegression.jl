@@ -1,8 +1,6 @@
 
 function fixed_point_function(hs, γs, λs)
 	γ = sum(γs)
-	active_components = λs .< Inf
-	γs =  
 	fixed_point_f = f -> f - sum( γs./γ./(λs./hs .+ 1 ./(1 .+ γ*f))  )
 	find_zero(fixed_point_f, (0.0, 100.0))
 end
