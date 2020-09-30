@@ -9,6 +9,7 @@ import MLJModelInterface
 const MMI = MLJModelInterface
 import MLJ 
 import MLJTuning
+using MutableNamedTuples
 
 using NonNegLeastSquares
 using Optim 
@@ -79,7 +80,8 @@ export GroupedFeatures,
 	   optimal_single_λ_risk,
 	   optimal_ignore_second_group_risk,
 	   SingleGroupRidgeRegressor,
-	   LooCVRidgeRegressor
+	   LooCVRidgeRegressor,
+	   MultiGroupRidgeRegressor
 	   
 	   
 end # module

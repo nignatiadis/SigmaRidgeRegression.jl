@@ -124,3 +124,23 @@ tmp_eval = evaluate!(single_group_ridge_machine, resampling=CV(nfolds=n), measur
 @test tmp_eval.measurement[1] ≈ loo_error(single_group_ridge_machine.cache) atol=0.02
 
 
+
+# Check multiridge
+
+multiridge = MultiGroupRidgeRegressor(GroupedFeatures([30;50]))
+loocv_multiridge = LooCVRidgeRegressor(ridge=multiridge, n=10)
+
+loocv_multiridge_mach = machine(loocv_multiridge, X, Y)
+fit!(loocv_multiridge_mach)
+
+multiridge_ranges = loocv_multiridge_mach.report.λ_range
+multiridge_loo_bruteforce = TunedModel(model=multiridge, 
+                                       resampling=CV(nfolds=n), 
+                                       tuning=Grid(resolution=loocv_multiridge.n), 
+                                       range=multiridge_ranges, 
+                                       measure=l2)
+
+multiridge_loo_bruteforce_machine = machine(multiridge_loo_bruteforce, X, Y)
+fit!(multiridge_loo_bruteforce_machine)
+@test values(multiridge_loo_bruteforce_machine.report.best_model.λ) == values(loocv_multiridge_mach.report.best_λ)
+@test predict(multiridge_loo_bruteforce_machine) == predict(loocv_multiridge_mach)

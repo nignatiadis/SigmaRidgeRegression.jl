@@ -12,9 +12,10 @@ function StatsBase.fit(grp_ridge::AbstractGroupRidgeRegressor, X, Y, grp::Groupe
 		pred = CholeskyRidgePredictor(X)
 	elseif decomposition == :woodbury
 		pred = WoodburyRidgePredictor(X)
+	else 
+		"Only :default, :cholesky and :woodbury currently supported"
 	end 
 	workspace = BasicGroupRidgeWorkspace(X=X, Y=Y, groups=grp, XtXpΛ_chol = pred)
-	
 	StatsBase.fit!(workspace, tuning)
 	workspace
 end 

@@ -13,7 +13,7 @@ function MMI.fit(m::SingleGroupRidgeRegressor, verb::Int, X, y)
     return βs, workspace, NamedTuple{}()
 end
 
-function MMI.update(model::SingleGroupRidgeRegressor, verbosity::Int, old_fitresult, old_cache, X, y)
+function MMI.update(model::AbstractGroupRidgeRegressor, verbosity::Int, old_fitresult, old_cache, X, y)
     new_λ = model.λ
     StatsBase.fit!(old_cache, new_λ)
     βs = StatsBase.coef(old_cache)
@@ -32,6 +32,12 @@ Base.@kwdef mutable struct LooCVRidgeRegressor{G, T} <: AbstractGroupRidgeRegres
     scale = :log10
 end 
 
+function range_and_grid(ridge::SingleGroupRidgeRegressor, λ_min, λ_max, scale, n)
+    λ_range = range(ridge, :λ, lower=λ_min, upper=λ_max, scale=scale)
+    model_grid = MLJTuning.grid(ridge, [:λ], [MLJ.iterator(λ_range, n)])
+    λ_range, model_grid
+end
+
 function MMI.fit(m::LooCVRidgeRegressor, verb::Int, X, y)
     ridge = m.ridge
     mach = MLJ.machine(ridge, X, y)
@@ -40,8 +46,9 @@ function MMI.fit(m::LooCVRidgeRegressor, verb::Int, X, y)
     if m.λ_max  == :default 
         λ_max = 100*maximum(abs.(ridge_workspace.XtY))
     end 
-    λ_range = range(ridge, :λ, lower=m.λ_min_ratio*λ_max, upper=λ_max, scale=m.scale)
-    model_grid = MLJTuning.grid(ridge, [:λ], [MLJ.iterator(λ_range, m.n)])
+    λ_min = m.λ_min_ratio*λ_max
+    λ_range, model_grid = range_and_grid(ridge, λ_min, λ_max, m.scale, m.n)
+
     history = map(model_grid) do newm
         λ = newm.λ
         mach.model.λ = newm.λ
@@ -59,9 +66,39 @@ function MMI.fit(m::LooCVRidgeRegressor, verb::Int, X, y)
               best_λ = best_λ,
               loos = loos,
               λs = λs,
-              λ_max = λ_max)
+              λ_max = λ_max,
+              λ_range = λ_range)
     fit!(mach)
     βs = StatsBase.coef(ridge_workspace)
     # return
     return βs, ridge_workspace, report
+end
+
+mutable struct MultiGroupRidgeRegressor{T, G<:GroupedFeatures} <: AbstractGroupRidgeRegressor    
+    decomposition::Symbol
+    λ::T   #Named tuple 
+    groups::G
+end 
+
+function MultiGroupRidgeRegressor(groups; decomposition=:default)
+    ngr = ngroups(groups)
+    λ_expr = Tuple(Symbol.(:λ, Base.OneTo(ngr)))
+    λ_tupl = MutableNamedTuple{λ_expr}(tuple(ones(ngr)...))
+    MultiGroupRidgeRegressor(decomposition, λ_tupl, groups)
+end
+
+function MMI.fit(m::MultiGroupRidgeRegressor, verb::Int, X, y)
+    Xmatrix = MMI.matrix(X)
+    p = size(Xmatrix, 2)
+    workspace = StatsBase.fit(m, Xmatrix, y, m.groups)
+    βs = StatsBase.coef(workspace)
+    # return
+    return βs, workspace, NamedTuple{}()
+end
+
+function range_and_grid(ridge::MultiGroupRidgeRegressor, λ_min, λ_max, scale, n)
+    λ_names = [Meta.parse("(λ.$λ)") for λ in keys(ridge.λ)]
+    λ_range = [range(ridge, λ, lower=λ_min, upper=λ_max, scale=scale) for λ in λ_names]
+    model_grid = MLJTuning.grid(ridge, λ_names, MLJ.iterator.(λ_range, n))
+    λ_range, model_grid
 end

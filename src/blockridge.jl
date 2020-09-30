@@ -177,6 +177,7 @@ end
 
 
 function StatsBase.fit!(rdg::BasicGroupRidgeWorkspace, λs)
+    λs = isa(λs, MutableNamedTuple) ? collect(values(λs)) : λs 
     rdg.λs .= λs
     update_λs!(rdg.XtXpΛ_chol, rdg.groups, λs)
     #rdg.XtXpΛ .= Symmetric(rdg.XtX + Diagonal(group_expand(rdg.groups, λs)))
