@@ -2,7 +2,7 @@ using SigmaRidgeRegression
 using Test
 using LinearAlgebra
 using Random
-using StatsBase
+import StatsBase
 
 @testset "Woodbury and Cholesky" begin
     Random.seed!(1)

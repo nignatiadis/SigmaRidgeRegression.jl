@@ -73,7 +73,7 @@ loocv_ridge_bruteforce = TunedModel(model = single_group_ridge_reg,
                                     tuning = Grid(resolution=loocv_ridge.n), 
                                     resampling=  CV(nfolds=n),
                                     measure = l2,
-                                    range = λ_range_new)
+                                    range = λ_range)
 
 loocv_ridge_bruteforce_machine = machine(loocv_ridge_bruteforce, X,Y)
 @time fit!(loocv_ridge_bruteforce_machine)
@@ -86,7 +86,7 @@ Xnew = MLJ.table(randn(10, p));
 ## visualize
 plot(loocv_ridge_machine.report.λs, loocv_ridge_machine.report.loos, scale=loocv_ridge_machine.model.scale, label="loo shortcut")
 vline!([loocv_ridge_machine.report.best_λ])
-single_ridge_cv_curve_loo = learning_curve(single_group_ridge_machine, range=λ_range_new, resampling=CV(nfolds=n), measure=l2)
+single_ridge_cv_curve_loo = learning_curve(single_group_ridge_machine, range=λ_range, resampling=CV(nfolds=n), measure=l2)
 plot!(single_ridge_cv_curve_loo.parameter_values,
      single_ridge_cv_curve_loo.measurements,
      xlab=single_ridge_cv_curve_loo.parameter_name,
