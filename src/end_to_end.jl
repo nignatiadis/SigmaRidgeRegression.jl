@@ -1,4 +1,5 @@
-abstract type AbstractGroupRidgeRegressor <: MMI.Deterministic end
+abstract type AbstractGroupRegressor <: MMI.Deterministic end 
+abstract type AbstractGroupRidgeRegressor <: AbstractGroupRegressor end
 
 Base.@kwdef struct GroupRidgeRegression{T} <: AbstractGroupRidgeRegressor
 	decomposition::Symbol = :default 

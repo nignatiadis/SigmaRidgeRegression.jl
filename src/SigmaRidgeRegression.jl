@@ -17,6 +17,7 @@ using RCall
 using Roots
 using Setfield
 using StatsBase
+using UnPack
 using WoodburyMatrices
 
 import Base.\
@@ -35,6 +36,7 @@ include("simulations.jl")
 include("r_wrapper.jl")
 include("theoretical_risk_curves.jl")
 include("mmi.jl")
+include("grouplasso.jl")
 
 export GroupedFeatures,
        ngroups,
@@ -81,7 +83,8 @@ export GroupedFeatures,
 	   optimal_ignore_second_group_risk,
 	   SingleGroupRidgeRegressor,
 	   LooCVRidgeRegressor,
-	   MultiGroupRidgeRegressor
+	   MultiGroupRidgeRegressor,
+	   GroupLassoRegressor
 	   
 	   
 end # module

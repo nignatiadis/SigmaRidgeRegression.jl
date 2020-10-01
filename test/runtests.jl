@@ -42,3 +42,4 @@ end
 
 
 include("test_mmi.jl")
+include("test_grouplasso.jl")

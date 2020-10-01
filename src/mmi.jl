@@ -20,7 +20,7 @@ function MMI.update(model::AbstractGroupRidgeRegressor, verbosity::Int, old_fitr
     return βs, old_cache, NamedTuple{}()
 end
 
-function MMI.predict(model::AbstractGroupRidgeRegressor, fitresult, Xnew)
+function MMI.predict(model::AbstractGroupRegressor, fitresult, Xnew)
     MMI.matrix(Xnew)*fitresult
 end 
 

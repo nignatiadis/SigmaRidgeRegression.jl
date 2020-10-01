@@ -20,6 +20,7 @@ Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 WoodburyMatrices = "efce3f68-66dc-5838-9240-27a6d6f5f9b6"
 
 [compat]
