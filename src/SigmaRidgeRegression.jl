@@ -35,6 +35,7 @@ include("simulations.jl")
 include("r_wrapper.jl")
 include("theoretical_risk_curves.jl")
 include("mmi.jl")
+include("mmi_sigmaridge.jl")
 include("grouplasso.jl")
 
 export GroupedFeatures,
@@ -77,6 +78,7 @@ export GroupedFeatures,
 	   SingleGroupRidgeRegressor,
 	   LooCVRidgeRegressor,
 	   MultiGroupRidgeRegressor,
+	   SigmaRidgeRegressor,
 	   GroupLassoRegressor
 	   
 	   
