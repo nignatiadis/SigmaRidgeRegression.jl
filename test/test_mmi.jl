@@ -19,8 +19,8 @@ const MMI = MLJModelInterface
 
 # Let us first test if the code works for a single predictor
 
-single_group_ridge_reg = SingleGroupRidgeRegressor(:cholesky, 0.0)
-single_group_ridge_reg_woodbury = SingleGroupRidgeRegressor(:woodbury, 0.0)
+single_group_ridge_reg = SingleGroupRidgeRegressor(decomposition=:cholesky, λ=0.0)
+single_group_ridge_reg_woodbury = SingleGroupRidgeRegressor(decomposition=:woodbury, λ=0.0)
 mljlm_ridge = RidgeRegressor(lambda=0.0, fit_intercept=false)
 
 

@@ -19,7 +19,3 @@ function estimate_var(::DickerMoments, X, Y; Σ=I)
 	(p+n+1)/n/(n+1)*Y_norm_squared - 1/n/(n+1)*XtopY_norm_squared
 end 
 
-Base.@kwdef struct SigmaLeaveOneOut{O} <: NoiseLevelEstimator
-	optimizer::O = GoldenSection()
-end
-

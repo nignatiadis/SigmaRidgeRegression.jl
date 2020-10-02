@@ -1,13 +1,14 @@
-Base.@kwdef mutable struct SingleGroupRidgeRegressor{T} <: AbstractGroupRidgeRegressor    
+Base.@kwdef mutable struct SingleGroupRidgeRegressor{T, G} <: AbstractGroupRidgeRegressor    
     decomposition::Symbol = :default  
     λ::T = 0.0
+    groups::G = nothing
 end 
 
 function MMI.fit(m::SingleGroupRidgeRegressor, verb::Int, X, y)
     Xmatrix = MMI.matrix(X)
     p = size(Xmatrix, 2)
-    grps = GroupedFeatures([p])
-    workspace = StatsBase.fit(m, Xmatrix, y, grps)
+    groups = isnothing(m.groups) ? GroupedFeatures([p]) : m.groups
+    workspace = StatsBase.fit(m, Xmatrix, y, groups)
     βs = StatsBase.coef(workspace)
     # return
     return βs, workspace, NamedTuple{}()
@@ -24,8 +25,13 @@ function MMI.predict(model::AbstractGroupRegressor, fitresult, Xnew)
     MMI.matrix(Xnew)*fitresult
 end 
 
+"""
+Use leave-one-out-cross-validation to choose over
+group-specific Ridge-penalty matrices
+of the form, i.e., over ``λ \\in (0,∞)^K``.
+"""
 Base.@kwdef mutable struct LooCVRidgeRegressor{G, T} <: AbstractGroupRidgeRegressor
-    ridge::G = SingleGroupRidgeRegressor(:cholesky, 1.0)
+    ridge::G = SingleGroupRidgeRegressor(decomposition=:cholesky, λ=1.0)
     n::Int = 100
     λ_min_ratio::Float64 = 1e-6
     λ_max::T = :default
@@ -80,10 +86,15 @@ mutable struct MultiGroupRidgeRegressor{T, G<:GroupedFeatures} <: AbstractGroupR
     groups::G
 end 
 
-function MultiGroupRidgeRegressor(groups; decomposition=:default)
+function MultiGroupRidgeRegressor(groups::GroupedFeatures; kwargs...)
+    ngr = ngroups(groups)
+    MultiGroupRidgeRegressor(groups, ones(ngr); kwargs...)
+end
+
+function MultiGroupRidgeRegressor(groups::GroupedFeatures, λs::AbstractVector; decomposition=:default)
     ngr = ngroups(groups)
     λ_expr = Tuple(Symbol.(:λ, Base.OneTo(ngr)))
-    λ_tupl = MutableNamedTuple{λ_expr}(tuple(ones(ngr)...))
+    λ_tupl = MutableNamedTuple{λ_expr}(tuple(λs...))
     MultiGroupRidgeRegressor(decomposition, λ_tupl, groups)
 end
 

@@ -47,7 +47,7 @@ function mgcv(X, Y, grp; method="REML")
 end
 
 
-Base.@kwdef struct MGCVTuning <: AbstractRidgeTuning
+Base.@kwdef struct MGCVTuning
   method::String = "REML"
 end 
   

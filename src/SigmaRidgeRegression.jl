@@ -12,7 +12,6 @@ import MLJTuning
 using MutableNamedTuples
 
 using NonNegLeastSquares
-using Optim 
 using RCall
 using Roots
 using Setfield
@@ -59,13 +58,7 @@ export GroupedFeatures,
 	   estimate_var,
 	   whiten_covariates,
 	   NoiseLevelEstimator,
-	   SigmaLeaveOneOut,
 	   DickerMoments,
-	   GroupRidgeRegression,
-	   AbstractRidgeTuning,
-	   SigmaRidgeTuning,
-	   OneParamCrossValRidgeTuning,
-	   MultiParamCrossValRidgeTuning,
 	   CovarianceDesign,
 	   nfeatures,
 	   get_Σ,
