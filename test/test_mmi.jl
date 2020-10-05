@@ -23,7 +23,6 @@ single_group_ridge_reg = SingleGroupRidgeRegressor(decomposition=:cholesky, λ=0
 single_group_ridge_reg_woodbury = SingleGroupRidgeRegressor(decomposition=:woodbury, λ=0.0)
 mljlm_ridge = RidgeRegressor(lambda=0.0, fit_intercept=false)
 
-
 Random.seed!(1)
 n = 100 
 p = 80
@@ -33,14 +32,12 @@ Xtable = MLJ.table(X);
 Y = X*βs .+ randn(n)
 grps = GroupedFeatures([p]);
 
-
-
 single_group_ridge_machine = machine(single_group_ridge_reg, Xtable, Y)
 single_group_ridge_woodbury_machine = machine(single_group_ridge_reg_woodbury, Xtable, Y)
 mljlm_ridge_machine = machine(mljlm_ridge, Xtable, Y) 
 
 fit!(single_group_ridge_machine)
-@test_broken fit!(single_group_ridge_woodbury_machine) #cannot handle 0.0
+@test_broken fit!(single_group_ridge_woodbury_machine)#cannot handle 0.0
 
 fit!(mljlm_ridge_machine)
 
@@ -57,6 +54,30 @@ fit!(mljlm_ridge_machine)
 @test predict(single_group_ridge_machine) ≈ predict(mljlm_ridge_machine)
 @test predict(single_group_ridge_machine) ≈ predict(single_group_ridge_woodbury_machine)
 
+
+ 
+# check above with scaling/centering
+
+for scale in [false]
+     for decomposition in [:cholesky; :woodbury]    
+          @show scale, decomposition
+          Yshift = Y .+ 10.0
+          Y_center = Yshift .- mean(Yshift)
+          X_center_transform = StatsBase.fit(StatsBase.ZScoreTransform, X; dims=1,scale=scale, center=true)
+          X_center = StatsBase.transform(X_center_transform, X)
+
+          single_group_ridge_reg_centered = SingleGroupRidgeRegressor(decomposition=decomposition, λ=1.0, center=true, scale=scale)
+          single_group_ridge_reg_centered_machine = machine(single_group_ridge_reg_centered, X, Yshift)
+          fit!(single_group_ridge_reg_centered_machine)
+
+          single_group_ridge_reg_tmp = SingleGroupRidgeRegressor(decomposition=decomposition, λ=1.0)
+          single_group_ridge_machine_centered_data =  machine(single_group_ridge_reg_tmp, X_center, Y_center)
+          fit!(single_group_ridge_machine_centered_data)
+
+          @test predict(single_group_ridge_reg_centered_machine) == predict(single_group_ridge_machine_centered_data) .+ mean(Yshift)
+     end
+end
+# .+  mean(Y)
 
 
 # Start checking LOOCVRidgeRegressor

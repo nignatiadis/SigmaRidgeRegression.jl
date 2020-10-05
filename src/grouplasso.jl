@@ -9,7 +9,7 @@ Base.@kwdef mutable struct GroupLassoRegressor{G, P, T<:Number} <: AbstractGroup
 	abs_tol::T = η_threshold
 end
 
-
+_main_hyperparameter(::GroupLassoRegressor) = :λ
 
 function _glasso_fit!(workspace, glasso::GroupLassoRegressor)
 	@unpack η_reg, η_threshold, abs_tol, groups, maxiter, λ, groups_multiplier = glasso
@@ -34,7 +34,6 @@ function _glasso_fit!(workspace, glasso::GroupLassoRegressor)
 	(workspace = workspace, converged = converged, iter_count = iter_cnt)
 end
 
-
 function MMI.fit(m::GroupLassoRegressor, verb::Int, X, y)
     Xmatrix = MMI.matrix(X)
     p = size(Xmatrix, 2)
@@ -45,7 +44,6 @@ function MMI.fit(m::GroupLassoRegressor, verb::Int, X, y)
     # return
     return βs, glasso_workspace, NamedTuple{}()
 end
-
 
 function MMI.update(model::GroupLassoRegressor, verbosity::Int, old_fitresult, old_cache, X, y)
     glasso_workspace = _glasso_fit!(old_cache.workspace, model)

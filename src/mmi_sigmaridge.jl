@@ -6,6 +6,9 @@ Base.@kwdef mutable struct SigmaRidgeRegressor{G, T, M} <: SigmaRidgeRegression.
     init_model::M = LooCVRidgeRegressor(ridge=SingleGroupRidgeRegressor(decomposition=decomposition, groups=groups))
 end 
 
+_main_hyperparameter(::SigmaRidgeRegressor) = :σ
+
+
 function MMI.fit(m::SigmaRidgeRegressor, verb::Int, X, y)
     init_machine = machine(m.init_model, X, y)
     fit!(init_machine)

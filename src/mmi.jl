@@ -1,42 +1,61 @@
-Base.@kwdef mutable struct SingleGroupRidgeRegressor{T, G} <: AbstractGroupRidgeRegressor    
+abstract type  FixedLambdaGroupRidgeRegressor <: AbstractGroupRidgeRegressor end
+
+"""
+    SingleGroupRidgeRegressor(; decomposition, λ, groups)
+"""
+Base.@kwdef mutable struct SingleGroupRidgeRegressor{T, G} <: FixedLambdaGroupRidgeRegressor    
     decomposition::Symbol = :default  
-    λ::T = 0.0
+    λ::T = 1.0
     groups::G = nothing
+    center::Bool = false
+    scale::Bool = false
 end 
 
-function MMI.fit(m::SingleGroupRidgeRegressor, verb::Int, X, y)
+_main_hyperparameter(::SingleGroupRidgeRegressor) = :λ
+_main_hyperparameter_value(m) = getproperty(m, _main_hyperparameter(m))
+
+function _groups(m::SingleGroupRidgeRegressor, p) 
+    isnothing(m.groups) ? GroupedFeatures([p]) : m.groups
+end
+
+function MMI.fit(m::FixedLambdaGroupRidgeRegressor, verb::Int, X, y)
+    @unpack center, scale, groups = m
     Xmatrix = MMI.matrix(X)
+    if center || scale
+        x_transform = StatsBase.fit(ZScoreTransform, Xmatrix; dims=1, center=center, scale=scale)
+        y_transform = StatsBase.fit(ZScoreTransform, y; dims=1, center=center, scale=scale)
+        Xmatrix = StatsBase.transform(x_transform, Xmatrix)
+        y = StatsBase.transform(y_transform, y)
+    else 
+        x_transform = nothing
+        y_transform = nothing
+    end 
     p = size(Xmatrix, 2)
-    groups = isnothing(m.groups) ? GroupedFeatures([p]) : m.groups
-    workspace = StatsBase.fit(m, Xmatrix, y, groups)
+    groups = _groups(m, p)
+    workspace = StatsBase.fit(m, Xmatrix, y, groups)  # see end_to_end.jl
     βs = StatsBase.coef(workspace)
+    fitresult = (coef = βs, x_transform = x_transform, y_transform = y_transform)
     # return
-    return βs, workspace, NamedTuple{}()
+    return fitresult, workspace, NamedTuple{}()
 end
 
 function MMI.update(model::AbstractGroupRidgeRegressor, verbosity::Int, old_fitresult, old_cache, X, y)
     new_λ = model.λ
     StatsBase.fit!(old_cache, new_λ)
     βs = StatsBase.coef(old_cache)
-    return βs, old_cache, NamedTuple{}()
+    fitresult = (coef = βs, x_transform = old_fitresult.x_transform, y_transform = old_fitresult.y_transform)
+    return fitresult, old_cache, NamedTuple{}()
 end
 
 function MMI.predict(model::AbstractGroupRegressor, fitresult, Xnew)
-    MMI.matrix(Xnew)*fitresult
+    Xnew = MMI.matrix(Xnew)
+    @unpack coef, x_transform, y_transform = fitresult
+    !isnothing(x_transform) && (Xnew = StatsBase.transform(x_transform, Xnew))
+    ypred = Xnew*coef
+    !isnothing(y_transform) && StatsBase.reconstruct!(y_transform, ypred)
+    ypred
 end 
 
-"""
-Use leave-one-out-cross-validation to choose over
-group-specific Ridge-penalty matrices
-of the form, i.e., over ``λ \\in (0,∞)^K``.
-"""
-Base.@kwdef mutable struct LooCVRidgeRegressor{G, T} <: AbstractGroupRidgeRegressor
-    ridge::G = SingleGroupRidgeRegressor(decomposition=:cholesky, λ=1.0)
-    n::Int = 100
-    λ_min_ratio::Float64 = 1e-6
-    λ_max::T = :default
-    scale = :log10
-end 
 
 function range_and_grid(ridge::SingleGroupRidgeRegressor, λ_min, λ_max, scale, n)
     λ_range = range(ridge, :λ, lower=λ_min, upper=λ_max, scale=scale)
@@ -44,10 +63,68 @@ function range_and_grid(ridge::SingleGroupRidgeRegressor, λ_min, λ_max, scale,
     λ_range, model_grid
 end
 
+
+
+"""
+    MultiGroupRidgeRegressor(; decomposition, λ, groups)
+"""
+mutable struct MultiGroupRidgeRegressor{T, G<:GroupedFeatures} <: FixedLambdaGroupRidgeRegressor    
+    decomposition::Symbol
+    λ::T   #Named tuple 
+    groups::G
+    center::Bool
+    scale::Bool
+end 
+
+_main_hyperparameter(::MultiGroupRidgeRegressor) = :λ
+_groups(m::MultiGroupRidgeRegressor, p) = m.groups
+
+function MultiGroupRidgeRegressor(groups::GroupedFeatures; kwargs...)
+    ngr = ngroups(groups)
+    MultiGroupRidgeRegressor(groups, ones(ngr); kwargs...)
+end
+
+function MultiGroupRidgeRegressor(groups::GroupedFeatures, λs::AbstractVector; 
+                                  decomposition=:default, center=false, scale=false)
+    ngr = ngroups(groups)
+    λ_expr = Tuple(Symbol.(:λ, Base.OneTo(ngr)))
+    λ_tupl = MutableNamedTuple{λ_expr}(tuple(λs...))
+    MultiGroupRidgeRegressor(decomposition, λ_tupl, groups)
+end
+
+
+function range_and_grid(ridge::MultiGroupRidgeRegressor, λ_min, λ_max, scale, n)
+    λ_names = [Meta.parse("(λ.$λ)") for λ in keys(ridge.λ)]
+    λ_range = [range(ridge, λ, lower=λ_min, upper=λ_max, scale=scale) for λ in λ_names]
+    model_grid = MLJTuning.grid(ridge, λ_names, MLJ.iterator.(λ_range, n))
+    λ_range, model_grid
+end
+
+
+
+
+# Autotuning code
+
+"""
+Use leave-one-out-cross-validation to choose over
+group-specific Ridge-penalty matrices
+of the form, i.e., over ``λ \\in (0,∞)^K``.
+"""
+Base.@kwdef mutable struct LooCVRidgeRegressor{G, T} <: AbstractGroupRidgeRegressor
+    ridge::G = SingleGroupRidgeRegressor(decomposition=:cholesky, λ = 1.0)
+    n::Int = 100
+    λ_min_ratio::Float64 = 1e-6
+    λ_max::T = :default
+    scale = :log10
+end 
+
 function MMI.fit(m::LooCVRidgeRegressor, verb::Int, X, y)
     ridge = m.ridge
     mach = MLJ.machine(ridge, X, y)
     fit!(mach)
+    x_transform = mach.fitresult.x_transform
+    y_transform = mach.fitresult.y_transform
+
     ridge_workspace = mach.cache
     if m.λ_max  == :default 
         λ_max = 100*maximum(abs.(ridge_workspace.XtY))
@@ -58,7 +135,7 @@ function MMI.fit(m::LooCVRidgeRegressor, verb::Int, X, y)
     history = map(model_grid) do newm
         λ = newm.λ
         mach.model.λ = newm.λ
-        fit!(mach)
+        fit!(mach; verbosity=0)
         loo = loo_error(ridge_workspace)
         (loo = loo, λ=λ, model=newm)
     end
@@ -76,40 +153,7 @@ function MMI.fit(m::LooCVRidgeRegressor, verb::Int, X, y)
               λ_range = λ_range)
     fit!(mach)
     βs = StatsBase.coef(ridge_workspace)
+    fitresult = (coef = βs, x_transform = x_transform, y_transform = y_transform)
     # return
-    return βs, ridge_workspace, report
-end
-
-mutable struct MultiGroupRidgeRegressor{T, G<:GroupedFeatures} <: AbstractGroupRidgeRegressor    
-    decomposition::Symbol
-    λ::T   #Named tuple 
-    groups::G
-end 
-
-function MultiGroupRidgeRegressor(groups::GroupedFeatures; kwargs...)
-    ngr = ngroups(groups)
-    MultiGroupRidgeRegressor(groups, ones(ngr); kwargs...)
-end
-
-function MultiGroupRidgeRegressor(groups::GroupedFeatures, λs::AbstractVector; decomposition=:default)
-    ngr = ngroups(groups)
-    λ_expr = Tuple(Symbol.(:λ, Base.OneTo(ngr)))
-    λ_tupl = MutableNamedTuple{λ_expr}(tuple(λs...))
-    MultiGroupRidgeRegressor(decomposition, λ_tupl, groups)
-end
-
-function MMI.fit(m::MultiGroupRidgeRegressor, verb::Int, X, y)
-    Xmatrix = MMI.matrix(X)
-    p = size(Xmatrix, 2)
-    workspace = StatsBase.fit(m, Xmatrix, y, m.groups)
-    βs = StatsBase.coef(workspace)
-    # return
-    return βs, workspace, NamedTuple{}()
-end
-
-function range_and_grid(ridge::MultiGroupRidgeRegressor, λ_min, λ_max, scale, n)
-    λ_names = [Meta.parse("(λ.$λ)") for λ in keys(ridge.λ)]
-    λ_range = [range(ridge, λ, lower=λ_min, upper=λ_max, scale=scale) for λ in λ_names]
-    model_grid = MLJTuning.grid(ridge, λ_names, MLJ.iterator.(λ_range, n))
-    λ_range, model_grid
+    return fitresult, ridge_workspace, report
 end
