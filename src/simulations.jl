@@ -1,5 +1,15 @@
 abstract type AbstractResponseModel end 
 
+function random_betas(gr::GroupedFeatures, αs)
+    ps = gr.ps
+    βs = zeros(eltype(αs), gr.p)
+    for i=1:gr.num_groups
+        βs[group_idx(gr, i)] .= randn(ps[i]) .* sqrt(αs[i]^2/ps[i])
+    end
+    βs
+end
+
+
 
 Base.@kwdef struct RandomLinearResponseModel <: AbstractResponseModel
 	αs::Vector{Float64}

@@ -18,6 +18,10 @@ function _default_hyperparameter_maximum(model::FixedLambdaGroupRidgeRegressor,f
     1000*maximum(abs.(fitted_machine.cache.XtY))
 end 
 
+function _default_param_min_ratio(AbstractGroupRidgeRegressor, fitted_machine)
+    1e-5
+end 
+
 function _groups(m::SingleGroupRidgeRegressor, p) 
     isnothing(m.groups) ? GroupedFeatures([p]) : m.groups
 end
@@ -110,16 +114,16 @@ end
 
 # Autotuning code
 
-Base.@kwdef struct DefaultTuning{T}
+Base.@kwdef struct DefaultTuning{T,M}
     resolution::Int = 100
     n::Int = 1000
-    param_min_ratio::Float64 = 1e-5
+    param_min_ratio::M = :default
     param_max::T = :default
     scale = :log10
 end 
 
-function _tune(tuning::DefaultTuning, model, fitted_machine)
-    @unpack resolution, n, param_min_ratio, scale = tuning
+function _tuning_grid(tuning::DefaultTuning, model, fitted_machine)
+    @unpack resolution, n, scale = tuning
     if tuning.param_max  === :default 
         param_max = _default_hyperparameter_maximum(model, fitted_machine)
     elseif isa(tuning.param_max, Number)
@@ -128,6 +132,14 @@ function _tune(tuning::DefaultTuning, model, fitted_machine)
         error("param_max can be :default or a number only.")
     end 
     
+    if tuning.param_min_ratio  === :default 
+        param_min_ratio = _default_param_min_ratio(model, fitted_machine)
+    elseif isa(tuning.param_min_ratio, Number)
+        param_min_ratio = tuning.param_min_ratio
+    else
+        error("param_min_ratio can be :default or a number only.")
+    end 
+
     param_min = param_min_ratio*param_max
     param_range, model_grid = range_and_grid(model, param_min, param_max, scale, resolution)
     param_range, model_grid, param_max
@@ -160,7 +172,7 @@ function MMI.fit(m::LooRidgeRegressor, verb::Int, X, y)
     y_transform = mach.fitresult.y_transform
 
     ridge_workspace = _workspace(mach.cache)
-    param_range, model_grid, param_max = _tune(m.tuning, ridge, mach)
+    param_range, model_grid, param_max = _tuning_grid(m.tuning, ridge, mach)
     history = map(model_grid) do newm
         param = _main_hyperparameter_value(newm)
         mach.model = newm
@@ -199,5 +211,28 @@ Base.@kwdef mutable struct TunedRidgeRegressor{G, R, M, T} <: AbstractGroupRidge
     tuning::T = DefaultTuning()
     resampling::R = CV(nfolds=5)
     measure::M = l2
-    rng = Random.GLOBAL_RNG
 end 
+
+
+function MMI.fit(m::TunedRidgeRegressor, verb::Int, X, y)
+    ridge = m.ridge
+    mach = MLJ.machine(ridge, X, y)
+    fit!(mach)
+    #x_transform = mach.fitresult.x_transform
+    #y_transform = mach.fitresult.y_transform
+
+    ridge_workspace = _workspace(mach.cache)
+    param_range, model_grid, param_max = _tuning_grid(m.tuning, ridge, mach)
+
+    tuned_model = TunedModel(model = ridge,
+                            ranges=param_range,  
+                            tuning=Explicit(),
+                            resampling=m.resampling,
+                            measure=m.measure)
+    
+    tuned_mach = machine(tuned_model, X, y)
+    fit!(tuned_mach)
+
+    # return
+    return tuned_mach.fitresult, tuned_mach.cache, tuned_mach.report
+end

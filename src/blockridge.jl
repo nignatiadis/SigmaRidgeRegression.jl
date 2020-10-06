@@ -96,6 +96,7 @@ function _ldiv!(dest, W::SymWoodbury, A::Diagonal, B)
     end
     return dest
 end
+   
 
 #-----------------------------------------------------------------------
 function ldiv!(Y::AbstractMatrix, A::SymWoodbury, B::AbstractMatrix)
