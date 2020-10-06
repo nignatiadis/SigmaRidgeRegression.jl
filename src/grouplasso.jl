@@ -41,9 +41,9 @@ function _glasso_fit!(workspace, glasso::GroupLassoRegressor)
     end 
 	ηs = group_summary(groups, StatsBase.coef(workspace), norm)
 	final_λs = deepcopy(workspace.λs)
-	zero_groups = group_summary(groups, StatsBase.coef(workspace), norm) .< η_threshold .* groups_multiplier
-	final_λs[zero_groups] .= Inf 
-	fit!(workspace, final_λs)
+	#zero_groups = group_summary(groups, StatsBase.coef(workspace), norm) .< η_threshold .* groups_multiplier
+	#final_λs[zero_groups] .= Inf 
+	#fit!(workspace, final_λs)
 
 	(workspace = workspace, converged = converged, iter_count = iter_cnt)
 end

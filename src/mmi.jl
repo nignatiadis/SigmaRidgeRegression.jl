@@ -122,7 +122,7 @@ Base.@kwdef struct DefaultTuning{T,M}
     scale = :log10
 end 
 
-function _tuning_grid(tuning::DefaultTuning, model, fitted_machine)
+function _tuning_grid(tuning::DefaultTuning, model, fitted_machine, rng)
     @unpack resolution, n, scale = tuning
     if tuning.param_max  === :default 
         param_max = _default_hyperparameter_maximum(model, fitted_machine)
@@ -142,6 +142,10 @@ function _tuning_grid(tuning::DefaultTuning, model, fitted_machine)
 
     param_min = param_min_ratio*param_max
     param_range, model_grid = range_and_grid(model, param_min, param_max, scale, resolution)
+
+    if length(model_grid) > n 
+        model_grid = sample(rng, model_grid, n; replace=false)
+    end 
     param_range, model_grid, param_max
 end
 
@@ -172,7 +176,7 @@ function MMI.fit(m::LooRidgeRegressor, verb::Int, X, y)
     y_transform = mach.fitresult.y_transform
 
     ridge_workspace = _workspace(mach.cache)
-    param_range, model_grid, param_max = _tuning_grid(m.tuning, ridge, mach)
+    param_range, model_grid, param_max = _tuning_grid(m.tuning, ridge, mach, m.rng)
     history = map(model_grid) do newm
         param = _main_hyperparameter_value(newm)
         mach.model = newm
