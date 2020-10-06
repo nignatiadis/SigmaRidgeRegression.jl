@@ -165,3 +165,27 @@ multiridge_loo_bruteforce_machine = machine(multiridge_loo_bruteforce, X, Y)
 fit!(multiridge_loo_bruteforce_machine)
 @test values(multiridge_loo_bruteforce_machine.report.best_model.λ) == values(loocv_multiridge_mach.report.best_param)
 @test predict(multiridge_loo_bruteforce_machine) == predict(loocv_multiridge_mach)
+
+
+# test SigmaRidgeRegression
+
+groups = GroupedFeatures([30;50])
+sigmaridge = SigmaRidgeRegressor(groups=groups, σ=1.0)
+
+sigmaridge_machine = machine(sigmaridge, X, Y)
+fit!(sigmaridge_machine)
+
+sigmaridge_machine.cache.workspace.λs 
+predict(sigmaridge_machine)
+
+loo_sigmaridge = LooRidgeRegressor(ridge=sigmaridge, tuning=DefaultTuning(scale=:linear))
+loo_sigmaridge_machine = machine(loo_sigmaridge, X, Y)
+fit!(loo_sigmaridge_machine)
+σs = loo_sigmaridge_machine.report.params
+loo_σs = loo_sigmaridge_machine.report.loos
+
+plot(σs, loo_σs)
+loo_sigmaridge_machine.report.best_param
+loo_sigmaridge_machine.report.best_λs
+λ_path  =  vcat(loo_sigmaridge_machine.report.λs'...)
+plot(σs, λ_path,xlim=(0,1.5), ylim=(0,20))

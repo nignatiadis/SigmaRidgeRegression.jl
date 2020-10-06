@@ -61,10 +61,11 @@ function MMI.predict(model::AbstractGroupRegressor, fitresult, Xnew)
 end 
 
 
-function range_and_grid(ridge::SingleGroupRidgeRegressor, λ_min, λ_max, scale, n)
-    λ_range = range(ridge, :λ, lower=λ_min, upper=λ_max, scale=scale)
-    model_grid = MLJTuning.grid(ridge, [:λ], [MLJ.iterator(λ_range, n)])
-    λ_range, model_grid
+function range_and_grid(ridge::AbstractGroupRegressor, param_min, param_max, scale, resolution)
+    param_symbol = _main_hyperparameter(ridge)
+    param_range = range(ridge, param_symbol, lower=param_min, upper=param_max, scale=scale)
+    model_grid = MLJTuning.grid(ridge, [param_symbol], [MLJ.iterator(param_range, resolution)])
+    param_range, model_grid
 end
 
 
@@ -148,6 +149,9 @@ end
 _groups(loo::LooRidgeRegressor) = _groups(loo.ridge)
 
 
+_workspace(wk::BasicGroupRidgeWorkspace) = wk
+_workspace(wk) = wk.workspace
+
 function MMI.fit(m::LooRidgeRegressor, verb::Int, X, y)
     ridge = m.ridge
     mach = MLJ.machine(ridge, X, y)
@@ -155,7 +159,7 @@ function MMI.fit(m::LooRidgeRegressor, verb::Int, X, y)
     x_transform = mach.fitresult.x_transform
     y_transform = mach.fitresult.y_transform
 
-    ridge_workspace = mach.cache
+    ridge_workspace = _workspace(mach.cache)
     param_range, model_grid, param_max = _tune(m.tuning, ridge, mach)
     history = map(model_grid) do newm
         param = _main_hyperparameter_value(newm)

@@ -4,9 +4,9 @@ Base.@kwdef mutable struct SigmaRidgeRegressor{G, T, M} <: SigmaRidgeRegression.
     σ::T = 1.0
     center::Bool = false
     scale::Bool = false
-    init_model::M = LooCVRidgeRegressor(ridge=SingleGroupRidgeRegressor(decomposition=decomposition, 
-                                                                        groups=groups,
-                                                                        center=center, scale=scale))
+    init_model::M = SingleGroupRidgeRegressor(decomposition=decomposition,
+                                              groups=groups,
+                                              center=center, scale=scale)
 end 
 
 _main_hyperparameter(::SigmaRidgeRegressor) = :σ
@@ -17,16 +17,16 @@ end
 
 function MMI.fit(m::SigmaRidgeRegressor, verb::Int, X, y)
     @unpack init_model, decomposition, center, scale, groups = m
-    init_machine = machine(init_model, X, y)
-    fit!(init_machine)
+    init_machine = MLJ.machine(init_model, X, y)
+    fit!(init_machine; verbosity=verb)
     mom = MomentTunerSetup(init_machine.cache)
 
     σ = m.σ
     λs = SigmaRidgeRegression.get_λs(mom, abs2(σ))
 
     multiridge = MultiGroupRidgeRegressor(groups, λs; decomposition=decomposition, center=center, scale=scale)
-    multiridge_machine = machine(multiridge, X, y)
-    fit!(multiridge_machine)
+    multiridge_machine = MLJ.machine(multiridge, X, y)
+    fit!(multiridge_machine; verbosity=verb)
     
     workspace = multiridge_machine.cache
     cache = (workspace=workspace, mom=mom, multiridge_machine=multiridge_machine)
@@ -52,7 +52,7 @@ function MMI.update(model::SigmaRidgeRegressor, verbosity::Int, old_fitresult, o
     λs = SigmaRidgeRegression.get_λs(mom, abs2(σ))
     multiridge = MultiGroupRidgeRegressor(groups, λs; decomposition=decomposition, center=center, scale=scale)
     multiridge_machine.model = multiridge
-    fit!(multiridge_machine)
+    fit!(multiridge_machine; verbosity=verbosity)
 
     cache = (workspace=workspace, mom=mom, multiridge_machine=multiridge_machine)
 
