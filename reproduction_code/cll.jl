@@ -154,7 +154,7 @@ TunedRidgeModel()
 tbl_spec = Tabular("lllllll")
 line1 = ["", "Tuning", L"\lambda_{\text{Drugs}}",  L"\lambda_{\text{Methylation}}", L"\lambda_{\text{RNA}}", "10-fold RMSE",  "Time (sec)"]
 lines  = [line1, Rule(), line_sigma_ridge, line_single_ridge]
-lines  = [line1, Rule(), line_multi_ridge]
+lines  = [line1, Rule(), line_multi_ridge, line_glasso]
 latex_tabular("cll_analysis.tex", tbl_spec, lines) 
 
 
