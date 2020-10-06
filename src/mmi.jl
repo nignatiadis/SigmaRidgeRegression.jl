@@ -14,6 +14,10 @@ end
 _main_hyperparameter(::SingleGroupRidgeRegressor) = :λ
 _main_hyperparameter_value(m) = getproperty(m, _main_hyperparameter(m))
 
+function _default_hyperparameter_maximum(model::FixedLambdaGroupRidgeRegressor,fitted_machine)
+    1000*maximum(abs.(fitted_machine.cache.XtY))
+end 
+
 function _groups(m::SingleGroupRidgeRegressor, p) 
     isnothing(m.groups) ? GroupedFeatures([p]) : m.groups
 end
@@ -89,7 +93,7 @@ function MultiGroupRidgeRegressor(groups::GroupedFeatures, λs::AbstractVector;
     ngr = ngroups(groups)
     λ_expr = Tuple(Symbol.(:λ, Base.OneTo(ngr)))
     λ_tupl = MutableNamedTuple{λ_expr}(tuple(λs...))
-    MultiGroupRidgeRegressor(decomposition, λ_tupl, groups)
+    MultiGroupRidgeRegressor(decomposition, λ_tupl, groups, center, scale)
 end
 
 
@@ -105,20 +109,46 @@ end
 
 # Autotuning code
 
+Base.@kwdef struct DefaultTuning{T}
+    resolution::Int = 100
+    n::Int = 1000
+    param_min_ratio::Float64 = 1e-5
+    param_max::T = :default
+    scale = :log10
+end 
+
+function _tune(tuning::DefaultTuning, model, fitted_machine)
+    @unpack resolution, n, param_min_ratio, scale = tuning
+    if tuning.param_max  === :default 
+        param_max = _default_hyperparameter_maximum(model, fitted_machine)
+    elseif isa(tuning.param_max, Number)
+        param_max = tuning.param_max
+    else
+        error("param_max can be :default or a number only.")
+    end 
+    
+    param_min = param_min_ratio*param_max
+    param_range, model_grid = range_and_grid(model, param_min, param_max, scale, resolution)
+    param_range, model_grid, param_max
+end
+
+    
+
 """
 Use leave-one-out-cross-validation to choose over
 group-specific Ridge-penalty matrices
 of the form, i.e., over ``λ \\in (0,∞)^K``.
 """
-Base.@kwdef mutable struct LooCVRidgeRegressor{G, T} <: AbstractGroupRidgeRegressor
+Base.@kwdef mutable struct LooRidgeRegressor{G, T} <: AbstractGroupRidgeRegressor
     ridge::G = SingleGroupRidgeRegressor(decomposition=:cholesky, λ = 1.0)
-    n::Int = 100
-    λ_min_ratio::Float64 = 1e-6
-    λ_max::T = :default
-    scale = :log10
+    tuning::T = DefaultTuning()
+    rng = Random.GLOBAL_RNG
 end 
 
-function MMI.fit(m::LooCVRidgeRegressor, verb::Int, X, y)
+_groups(loo::LooRidgeRegressor) = _groups(loo.ridge)
+
+
+function MMI.fit(m::LooRidgeRegressor, verb::Int, X, y)
     ridge = m.ridge
     mach = MLJ.machine(ridge, X, y)
     fit!(mach)
@@ -126,34 +156,44 @@ function MMI.fit(m::LooCVRidgeRegressor, verb::Int, X, y)
     y_transform = mach.fitresult.y_transform
 
     ridge_workspace = mach.cache
-    if m.λ_max  == :default 
-        λ_max = 100*maximum(abs.(ridge_workspace.XtY))
-    end 
-    λ_min = m.λ_min_ratio*λ_max
-    λ_range, model_grid = range_and_grid(ridge, λ_min, λ_max, m.scale, m.n)
-
+    param_range, model_grid, param_max = _tune(m.tuning, ridge, mach)
     history = map(model_grid) do newm
-        λ = newm.λ
-        mach.model.λ = newm.λ
+        param = _main_hyperparameter_value(newm)
+        mach.model = newm
         fit!(mach; verbosity=0)
+        λ = deepcopy(ridge_workspace.λs)
         loo = loo_error(ridge_workspace)
-        (loo = loo, λ=λ, model=newm)
+        (loo = loo, param = param, model=newm, λ=λ)
     end
     loos = [h.loo for h in history]
-    λs = [h.λ for h in history]
+    params = [h.param for h in history]
+    λs = [h.λ  for h in history]
     best_model_idx = argmin(loos)
-    best_λ = model_grid[best_model_idx].λ
-    mach.model.λ = best_λ
+    best_model = model_grid[best_model_idx]
+    best_param = params[best_model_idx]
+    best_λs = λs[best_model_idx]
 
-    report = (best_model =  model_grid[best_model_idx],
-              best_λ = best_λ,
+    report = (best_model =  best_model,
+              best_param = best_param,
+              best_λs = best_λs,
               loos = loos,
               λs = λs,
-              λ_max = λ_max,
-              λ_range = λ_range)
+              params = params,
+              param_max = param_max,
+              param_range = param_range)
+    mach.model = best_model
     fit!(mach)
     βs = StatsBase.coef(ridge_workspace)
     fitresult = (coef = βs, x_transform = x_transform, y_transform = y_transform)
     # return
     return fitresult, ridge_workspace, report
 end
+
+
+Base.@kwdef mutable struct TunedRidgeRegressor{G, R, M, T} <: AbstractGroupRidgeRegressor
+    ridge::G = SingleGroupRidgeRegressor(decomposition=:cholesky, λ = 1.0)
+    tuning::T = DefaultTuning()
+    resampling::R = CV(nfolds=5)
+    measure::M = l2
+    rng = Random.GLOBAL_RNG
+end 

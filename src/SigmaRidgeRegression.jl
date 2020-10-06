@@ -12,10 +12,12 @@ import MLJTuning
 using MutableNamedTuples
 
 using NonNegLeastSquares
+using Random
 using RCall
 using Roots
 using Setfield
 using StatsBase
+using Tables
 using UnPack
 using WoodburyMatrices
 
@@ -24,6 +26,18 @@ import Base:reduce, rand
 import LinearAlgebra:ldiv!
 import StatsBase:fit!,fit, coef, islinear, leverage, modelmatrix, response, predict
 import WoodburyMatrices:_ldiv!
+
+
+#---------- piracy ---------------------------------------------------------
+MMI.nrows(X::Tables.MatrixTable) = size(MMI.matrix(X),1)
+MMI.selectrows(X::Tables.MatrixTable, ::Colon) =  X
+MMI.selectrows(X::Tables.MatrixTable, r::Integer) =  MMI.selectrows(X::Tables.MatrixTable, r:r)
+function MMI.selectrows(X::Tables.MatrixTable, r)
+    new_matrix = MMI.matrix(X)[r,:]
+    _names = getfield(X,:names)
+    MMI.table(new_matrix; names=_names)
+end
+#----------------------------------------------------------------------------
 
 include("utils.jl")
 include("groupedfeatures.jl")
@@ -76,10 +90,12 @@ export GroupedFeatures,
 	   optimal_single_λ_risk,
 	   optimal_ignore_second_group_risk,
 	   SingleGroupRidgeRegressor,
-	   LooCVRidgeRegressor,
 	   MultiGroupRidgeRegressor,
+	   LooRidgeRegressor,
+	   TunedRidgeRegressor,
 	   SigmaRidgeRegressor,
-	   GroupLassoRegressor
+	   GroupLassoRegressor,
+	   DefaultTuning
 	   
 	   
 end # module
