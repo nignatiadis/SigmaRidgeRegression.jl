@@ -47,12 +47,6 @@ function get_Σ(cov::IdentityCovarianceDesign{Int})
     I(cov.p)
 end
 
-spectrum(::IdentityCovarianceDesign) = [1.0]
-
-function get_Σ(cov::IdentityCovarianceDesign{Int})
-    I(cov.p)
-end
-
 Base.@kwdef struct UniformScalingCovarianceDesign{P<:Union{Missing,Int}} <:
                    DiagonalCovarianceDesign{P}
     scaling::Float64 = 1.0

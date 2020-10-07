@@ -96,6 +96,7 @@ export GroupedFeatures,
     TunedRidgeRegressor,
     SigmaRidgeRegressor,
     GroupLassoRegressor,
+    CVGGLassoRegressor,
     DefaultTuning
 
 
