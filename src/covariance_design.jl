@@ -41,9 +41,29 @@ Base.@kwdef struct IdentityCovarianceDesign{P<:Union{Missing,Int}} <: DiagonalCo
 	p::P = missing
 end
 
+spectrum(::IdentityCovarianceDesign) = [1.0]
+
 function get_Σ(cov::IdentityCovarianceDesign{Int})
 	I(cov.p)
 end
+
+spectrum(::IdentityCovarianceDesign) = [1.0]
+
+function get_Σ(cov::IdentityCovarianceDesign{Int})
+	I(cov.p)
+end
+
+Base.@kwdef struct UniformScalingCovarianceDesign{P<:Union{Missing,Int}} <: DiagonalCovarianceDesign{P}
+	scaling::Float64 = 1.0
+	p::P = missing
+end
+
+spectrum(unif::UniformScalingCovarianceDesign) = [unif.scaling]
+
+function get_Σ(cov::IdentityCovarianceDesign{Int})
+	(cov.scaling*I)*cov.p
+end
+
 
 Base.@kwdef struct ExponentialOrderStatsCovarianceDesign{P<:Union{Missing,Int}} <: DiagonalCovarianceDesign{P}
 	p::P = missing

@@ -19,7 +19,7 @@ function _default_hyperparameter_maximum(model::FixedLambdaGroupRidgeRegressor,f
 end 
 
 function _default_param_min_ratio(AbstractGroupRidgeRegressor, fitted_machine)
-    1e-5
+    1e-6
 end 
 
 function _groups(m::SingleGroupRidgeRegressor, p) 
@@ -191,11 +191,13 @@ function MMI.fit(m::LooRidgeRegressor, verb::Int, X, y)
     best_model_idx = argmin(loos)
     best_model = model_grid[best_model_idx]
     best_param = params[best_model_idx]
+    best_loo = loos[best_model_idx]
     best_λs = λs[best_model_idx]
 
     report = (best_model =  best_model,
               best_param = best_param,
               best_λs = best_λs,
+              best_loo = best_loo,
               loos = loos,
               λs = λs,
               params = params,

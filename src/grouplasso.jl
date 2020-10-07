@@ -5,10 +5,10 @@ Base.@kwdef mutable struct GroupLassoRegressor{G, P, T<:Number} <: AbstractGroup
 	λ::T = 1.0
 	center::Bool = false 
 	scale::Bool = false
-	maxiter::Int = 200
-	η_reg::T = 1e-8
+	maxiter::Int = 100
+	η_reg::T = 1e-5
 	η_threshold::T = 1e-2
-	abs_tol::T = 1e-5
+	abs_tol::T = 1e-4
 end
 
 _main_hyperparameter(::GroupLassoRegressor) = :λ
@@ -34,11 +34,17 @@ function _glasso_fit!(workspace, glasso::GroupLassoRegressor)
 		tmp_λs .= λ .* groups_multiplier ./ sqrt.( abs2.(ηs_new) .+ η_reg)
 		fit!(workspace, tmp_λs)
 		ηs_new .= group_summary(groups, StatsBase.coef(workspace), norm)
-		converged = norm(ηs_new .- ηs_old) < abs_tol
+		#converged = norm(ηs_new .- ηs_old, Inf) < abs_tol
+		@show (ηs_new .- ηs_old) ./ sqrt.( abs2.(ηs_old) .+ η_reg)
+		#@show (ηs_new .- ηs_old)
+		#@show sqrt.( abs2.(ηs_old) .+ η_reg)
+		converged = (norm( (ηs_new .- ηs_old) ./ sqrt.( abs2.(ηs_old) .+ η_reg), Inf) < abs_tol)  || 
+		            (norm( ηs_new .- ηs_old, Inf) < abs_tol)
 		ηs_old .= ηs_new
 		iter_cnt += 1
 		converged && break
-    end 
+	end 
+	@show "conv"
 	ηs = group_summary(groups, StatsBase.coef(workspace), norm)
 	final_λs = deepcopy(workspace.λs)
 	#zero_groups = group_summary(groups, StatsBase.coef(workspace), norm) .< η_threshold .* groups_multiplier
