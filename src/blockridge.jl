@@ -8,28 +8,27 @@
 Concrete subtypes available are `CholeskyRidgePredictor` and
 `WoodburyRidgePredictor`.
 """
-abstract type AbstractRidgePredictor end 
+abstract type AbstractRidgePredictor end
 
 """
 Used typically for p < n.
-"""  
-struct CholeskyRidgePredictor{M<:AbstractMatrix,
-                              SYM<:Symmetric,
-                              C<:Cholesky} <: AbstractRidgePredictor
-   X::M
-   XtX::SYM
-   XtXpΛ::SYM
-   XtXpΛ_chol::C
+"""
+struct CholeskyRidgePredictor{M<:AbstractMatrix,SYM<:Symmetric,C<:Cholesky} <:
+       AbstractRidgePredictor
+    X::M
+    XtX::SYM
+    XtXpΛ::SYM
+    XtXpΛ_chol::C
 end
 
-  
+
 function CholeskyRidgePredictor(X)
-    (n,p) = size(X)
-    XtX = Symmetric(X'*X ./n)
-    XtXpΛ = XtX + 1.0*I
+    (n, p) = size(X)
+    XtX = Symmetric(X' * X ./ n)
+    XtXpΛ = XtX + 1.0 * I
     XtXpΛ_chol = cholesky!(XtXpΛ)
     CholeskyRidgePredictor(X, XtX, XtXpΛ, XtXpΛ_chol)
-end 
+end
 
 function update_λs!(chol::CholeskyRidgePredictor, groups, λs)
     chol.XtXpΛ .= Symmetric(chol.XtX + Diagonal(group_expand(groups, λs)))
@@ -41,33 +40,33 @@ function ldiv!(A, chol::CholeskyRidgePredictor, B)
 end
 
 function \(chol::CholeskyRidgePredictor, B)
-   chol.XtXpΛ_chol \ B
+    chol.XtXpΛ_chol \ B
 end
 
 function XtXpΛ_ldiv_XtX(chol::CholeskyRidgePredictor)
-    chol.XtXpΛ_chol\chol.XtX
-end 
+    chol.XtXpΛ_chol \ chol.XtX
+end
 
 function trace_XtX(chol::CholeskyRidgePredictor)
     tr(chol.XtX)
-end 
+end
 
 
 """
 Used typically for p >> n and n reasonably small
 """
-struct WoodburyRidgePredictor{M<:AbstractMatrix,
-                              S<:SymWoodbury} <: SigmaRidgeRegression.AbstractRidgePredictor
-   X::M
-   wdb::S
+struct WoodburyRidgePredictor{M<:AbstractMatrix,S<:SymWoodbury} <:
+       SigmaRidgeRegression.AbstractRidgePredictor
+    X::M
+    wdb::S
 end
-    
+
 function WoodburyRidgePredictor(X)
-    (n,p) = size(X)
-    wdb = SymWoodbury(1.0*I(p), X', I(n)/n)
+    (n, p) = size(X)
+    wdb = SymWoodbury(1.0 * I(p), X', I(n) / n)
     WoodburyRidgePredictor(X, wdb)
 end
- 
+
 
 #Hi Tim,
 
@@ -96,13 +95,13 @@ function _ldiv!(dest, W::SymWoodbury, A::Diagonal, B)
     end
     return dest
 end
-   
+
 
 #-----------------------------------------------------------------------
 function ldiv!(Y::AbstractMatrix, A::SymWoodbury, B::AbstractMatrix)
-    ncols = size(B,2)
-    for i=1:ncols 
-        ldiv!(view(Y, :, i), A, view(B,:,i))
+    ncols = size(B, 2)
+    for i = 1:ncols
+        ldiv!(view(Y, :, i), A, view(B, :, i))
     end
     Y
 end
@@ -110,10 +109,10 @@ end
 
 function update_λs!(wbpred::WoodburyRidgePredictor, groups, λs)
     wdb = wbpred.wdb
-    n = size(wdb.D,1)
-    A =  Diagonal(group_expand(groups, λs))
+    n = size(wdb.D, 1)
+    A = Diagonal(group_expand(groups, λs))
     wdb.A .= A
-    wdb.Dp .= inv(n*I + wdb.B'*(A\wdb.B))
+    wdb.Dp .= inv(n * I + wdb.B' * (A \ wdb.B))
 end
 
 
@@ -122,36 +121,38 @@ function ldiv!(A, wbpred::WoodburyRidgePredictor, B)
 end
 
 function \(wbpred::WoodburyRidgePredictor, B)
-   wbpred.wdb \ B
+    wbpred.wdb \ B
 end
 
 
 function XtXpΛ_ldiv_XtX(wbpred::WoodburyRidgePredictor)
     n = size(wbpred.X, 1)
-    (wbpred.wdb\wbpred.X')*wbpred.X ./n
-end 
+    (wbpred.wdb \ wbpred.X') * wbpred.X ./ n
+end
 
 function trace_XtX(wbpred::WoodburyRidgePredictor)
-    n = size(wbpred.X,1)
+    n = size(wbpred.X, 1)
     # recall XtX here really is XtX/n
-    tr(wbpred.X'*wbpred.X)/n #make more efficient later.
-end 
+    tr(wbpred.X' * wbpred.X) / n #make more efficient later.
+end
 
-Base.@kwdef mutable struct BasicGroupRidgeWorkspace{CP<:AbstractRidgePredictor,
-                                M<:AbstractMatrix,
-                                V<:AbstractVector}
+Base.@kwdef mutable struct BasicGroupRidgeWorkspace{
+    CP<:AbstractRidgePredictor,
+    M<:AbstractMatrix,
+    V<:AbstractVector,
+}
     X::M
     Y::V
     groups::GroupedFeatures
-    n::Integer = size(X,1)
-    p::Integer = size(X,2)
+    n::Integer = size(X, 1)
+    p::Integer = size(X, 2)
     λs::V = ones(groups.num_groups)
-    XtY::V = X'*Y./n
+    XtY::V = X' * Y ./ n
     XtXpΛ_chol::CP = CholeskyRidgePredictor(X)
-    XtXpΛ_div_Xt::M = XtXpΛ_chol\X'.\n
-    β_curr::V = XtXpΛ_chol\XtY
+    XtXpΛ_div_Xt::M = XtXpΛ_chol \ X' .\ n
+    β_curr::V = XtXpΛ_chol \ XtY
     leverage_store::V = zeros(n)
-    Y_hat::V = X*β_curr
+    Y_hat::V = X * β_curr
     cache = nothing
 end
 
@@ -164,21 +165,21 @@ coef(rdg::BasicGroupRidgeWorkspace) = rdg.β_curr
 islinear(rdg::BasicGroupRidgeWorkspace) = true
 leverage(rdg::BasicGroupRidgeWorkspace) = rdg.leverage_store
 modelmatrix(rdg::BasicGroupRidgeWorkspace) = rdg.X
-predict(rdg::BasicGroupRidgeWorkspace, X) = X*coef(rdg)
+predict(rdg::BasicGroupRidgeWorkspace, X) = X * coef(rdg)
 response(rdg::BasicGroupRidgeWorkspace) = rdg.Y
 
 
 function loo_error(rdg::BasicGroupRidgeWorkspace)
-    mean(abs2.((rdg.Y .- rdg.Y_hat)./ ( 1.0 .- rdg.leverage_store)))
+    mean(abs2.((rdg.Y .- rdg.Y_hat) ./ (1.0 .- rdg.leverage_store)))
 end
 
 function mse_ridge(rdg::BasicGroupRidgeWorkspace, X_test, Y_test)
-    mean(abs2.(Y_test - X_test*rdg.β_curr))
+    mean(abs2.(Y_test - X_test * rdg.β_curr))
 end
 
 
 function StatsBase.fit!(rdg::BasicGroupRidgeWorkspace, λs)
-    λs = isa(λs, MutableNamedTuple) ? collect(values(λs)) : λs 
+    λs = isa(λs, MutableNamedTuple) ? collect(values(λs)) : λs
     rdg.λs .= λs
     update_λs!(rdg.XtXpΛ_chol, rdg.groups, λs)
     #rdg.XtXpΛ .= Symmetric(rdg.XtX + Diagonal(group_expand(rdg.groups, λs)))
@@ -197,8 +198,8 @@ end
     
 Implements the Panagiotis Lolas rule of thumb for picking an optimal λ.    
 """
-function λωλας_λ(rdg; multiplier=0.1)
-   multiplier*rdg.p^2/rdg.n/trace_XtX(rdg.XtXpΛ_chol) #TODO 2s
+function λωλας_λ(rdg; multiplier = 0.1)
+    multiplier * rdg.p^2 / rdg.n / trace_XtX(rdg.XtXpΛ_chol) #TODO 2s
 end
 
 #function max_σ_squared(rdg)
@@ -213,9 +214,11 @@ end
 
 
 
-Base.@kwdef struct MomentTunerSetup{IV<:AbstractVector,
-                               FV<:AbstractVector,
-                               FM<:AbstractMatrix}
+Base.@kwdef struct MomentTunerSetup{
+    IV<:AbstractVector,
+    FV<:AbstractVector,
+    FM<:AbstractMatrix,
+}
     ps::IV
     n::Integer
     beta_norms_squared::FV
@@ -228,46 +231,53 @@ function MomentTunerSetup(rdg::BasicGroupRidgeWorkspace)
     n = rdg.n
     ps = grps.ps
     ngroups = grps.num_groups
-    beta_norms_squared = group_summary(grps, rdg.β_curr, x->sum(abs2,x))
+    beta_norms_squared = group_summary(grps, rdg.β_curr, x -> sum(abs2, x))
     N_matrix = rdg.XtXpΛ_div_Xt #sqrt(n)*N from paper
-    M_matrix =  XtXpΛ_ldiv_XtX(rdg.XtXpΛ_chol) #TODO 1
+    M_matrix = XtXpΛ_ldiv_XtX(rdg.XtXpΛ_chol) #TODO 1
     N_norms_squared = Vector{eltype(beta_norms_squared)}(undef, ngroups)
     M_squared = Matrix{eltype(beta_norms_squared)}(undef, ngroups, ngroups)
 
-    for g in 1:ngroups
-        N_norms_squared[g]  = sum(abs2,N_matrix[group_idx(grps,g),:])
-        for h in 1:ngroups
+    for g = 1:ngroups
+        N_norms_squared[g] = sum(abs2, N_matrix[group_idx(grps, g), :])
+        for h = 1:ngroups
             # Mij  is entry (j,i)  and dived by p_i
-            M_squared[h,g] = sum(abs2,M_matrix[group_idx(grps,g), group_idx(grps,h)])
+            M_squared[h, g] = sum(abs2, M_matrix[group_idx(grps, g), group_idx(grps, h)])
         end
     end
-    MomentTunerSetup(ps=ps, n=n, beta_norms_squared=beta_norms_squared,
-                     N_norms_squared=N_norms_squared, M_squared=M_squared)
+    MomentTunerSetup(
+        ps = ps,
+        n = n,
+        beta_norms_squared = beta_norms_squared,
+        N_norms_squared = N_norms_squared,
+        M_squared = M_squared,
+    )
 
 end
 
 function σ_squared_max(mom::MomentTunerSetup)
     u = mom.beta_norms_squared
     v = mom.N_norms_squared
-    maximum( u./ v)
+    maximum(u ./ v)
 end
 
 function get_αs_squared(mom::MomentTunerSetup, σ_squared)
-   rhs = mom.beta_norms_squared .- σ_squared .* mom.N_norms_squared
-   α_sq_by_p = vec(nonneg_lsq(mom.M_squared,rhs;alg=:fnnls)) #  mom.M_squared\rhs\
-   α_sq_by_p .* mom.ps
+    rhs = mom.beta_norms_squared .- σ_squared .* mom.N_norms_squared
+    α_sq_by_p = vec(nonneg_lsq(mom.M_squared, rhs; alg = :fnnls)) #  mom.M_squared\rhs\
+    α_sq_by_p .* mom.ps
 end
 
 function get_λs(mom::MomentTunerSetup, σ_squared)
-   αs_squared = get_αs_squared(mom, σ_squared)
-   γs = mom.ps ./ mom.n
-   σ_squared .* γs ./ αs_squared
+    αs_squared = get_αs_squared(mom, σ_squared)
+    γs = mom.ps ./ mom.n
+    σ_squared .* γs ./ αs_squared
 end
 
-function sigma_squared_path(rdg::BasicGroupRidgeWorkspace, 
-                            mom::MomentTunerSetup,
-                            σs_squared)
-                           
+function sigma_squared_path(
+    rdg::BasicGroupRidgeWorkspace,
+    mom::MomentTunerSetup,
+    σs_squared,
+)
+
     n_σs = length(σs_squared)
     n_groups = ngroups(rdg)
     loos_hat = zeros(n_σs)
@@ -275,9 +285,9 @@ function sigma_squared_path(rdg::BasicGroupRidgeWorkspace,
     βs = zeros(n_σs, rdg.groups.p)
     for (i, σ_squared) in enumerate(σs_squared)
         λs_tmp = get_λs(mom, σ_squared)
-        λs[i,:] = λs_tmp
+        λs[i, :] = λs_tmp
         loos_hat[i] = fit!(rdg, λs_tmp)
-        βs[i,:] = rdg.β_curr
+        βs[i, :] = rdg.β_curr
     end
-    (λs = λs, loos = loos_hat, βs=βs)
+    (λs = λs, loos = loos_hat, βs = βs)
 end
