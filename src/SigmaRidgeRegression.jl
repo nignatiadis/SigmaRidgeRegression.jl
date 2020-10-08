@@ -2,6 +2,8 @@ module SigmaRidgeRegression
 
 using BlockDiagonals
 using Distributions
+
+using Expectations
 using FillArrays #not used yet
 using FiniteDifferences
 using LinearAlgebra
@@ -84,6 +86,7 @@ export GroupedFeatures,
     DiagonalCovarianceDesign,
     IdentityCovarianceDesign,
     ExponentialOrderStatsCovarianceDesign,
+    BlockCovarianceDesign,
     simulate,
     GroupRidgeSimulationSettings,
     RandomLinearResponseModel,

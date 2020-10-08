@@ -9,6 +9,7 @@ Base.@kwdef mutable struct GroupLassoRegressor{G,P,T<:Number} <: AbstractGroupRe
     η_reg::T = 1e-5
     η_threshold::T = 1e-2
     abs_tol::T = 1e-4
+    truncate_to_zero::Bool = true
 end
 
 _main_hyperparameter(::GroupLassoRegressor) = :λ
@@ -22,7 +23,7 @@ end
 _default_param_min_ratio(::GroupLassoRegressor, fitted_machine) = 1e-3
 
 function _glasso_fit!(workspace, glasso::GroupLassoRegressor)
-    @unpack η_reg, η_threshold, abs_tol, groups, maxiter, λ, groups_multiplier = glasso
+    @unpack η_reg, η_threshold, abs_tol, groups, maxiter, λ, groups_multiplier, truncate_to_zero = glasso
 
     tmp_λs = copy(workspace.λs)
     ηs_new = group_summary(groups, StatsBase.coef(workspace), norm)
@@ -35,7 +36,7 @@ function _glasso_fit!(workspace, glasso::GroupLassoRegressor)
         fit!(workspace, tmp_λs)
         ηs_new .= group_summary(groups, StatsBase.coef(workspace), norm)
         #converged = norm(ηs_new .- ηs_old, Inf) < abs_tol
-        @show (ηs_new .- ηs_old) ./ sqrt.(abs2.(ηs_old) .+ η_reg)
+        #@show (ηs_new .- ηs_old) ./ sqrt.(abs2.(ηs_old) .+ η_reg)
         #@show (ηs_new .- ηs_old)
         #@show sqrt.( abs2.(ηs_old) .+ η_reg)
         converged =
@@ -45,7 +46,7 @@ function _glasso_fit!(workspace, glasso::GroupLassoRegressor)
         iter_cnt += 1
         converged && break
     end
-    @show "conv"
+    #@show "conv"
     ηs = group_summary(groups, StatsBase.coef(workspace), norm)
     final_λs = deepcopy(workspace.λs)
     #zero_groups = group_summary(groups, StatsBase.coef(workspace), norm) .< η_threshold .* groups_multiplier
@@ -103,10 +104,12 @@ Base.@kwdef mutable struct CVGGLassoRegressor{G,S} <: AbstractGroupRegressor
     nfolds::S = 10
     center::Bool = false
     scale::Bool = false
+    engine::Symbol = :gglasso
+    eps::Float64 = 1e-8
 end
 
 function MMI.fit(m::CVGGLassoRegressor, verb::Int, X, y)
-    @unpack center, scale, groups, nfolds = m
+    @unpack center, scale, groups, nfolds, engine = m
     Xmatrix = MMI.matrix(X)
     if center || scale
         x_transform = StatsBase.fit(
@@ -130,17 +133,33 @@ function MMI.fit(m::CVGGLassoRegressor, verb::Int, X, y)
     groups = m.groups
     group_index = group_expand(groups, Base.OneTo(ngroups(groups)))
 
-    R"library(gglasso)"
     @rput Xmatrix
     @rput y
     @rput group_index
     @rput p
 
-    R"gglasso_cv_fit <- cv.gglasso(Xmatrix, y, group=group_index, nfolds=$(nfolds), intercept=FALSE)"
-    R"betas <- coef(gglasso_cv_fit, s='lambda.min')[-1]"
-    R"lambda_cv <- gglasso_cv_fit$lambda.min"
+    if engine === :gglasso
+        R"library(gglasso)"
+        R"gglasso_cv_fit <- cv.gglasso(Xmatrix, y, group=group_index, nfolds=$(nfolds), intercept=FALSE)"
+        R"betas <- coef(gglasso_cv_fit, s='lambda.min')[-1]"
+        R"lambda_cv <- gglasso_cv_fit$lambda.min"
+        R"lambda_max <- max(gglasso_cv_fit$lambda)"
+        R"tmp_intercept <- 0.0"
+    elseif engine === :grpreg
+        R"library(grpreg)"
+        R"gglasso_cv_fit <- cv.grpreg(Xmatrix, y, group=as.factor(group_index), nfolds=$(nfolds),
+                                      penalty = 'grLasso', family='gaussian')"
+        R"lambda_cv <- gglasso_cv_fit$lambda.min"
+        R"tmp_intercept <- coef(gglasso_cv_fit, lambda_cv)[1]"
+        R"lambda_max <- max(gglasso_cv_fit$lambda)"
+        R"betas <- coef(gglasso_cv_fit, lambda_cv)[-1]"
+    end
+
+
     @rget betas
     @rget lambda_cv
+    @rget lambda_max
+    @rget tmp_intercept
 
     λ_opt = sqrt(p)*lambda_cv
     ηs_groupwise = group_summary(groups, betas, norm)
@@ -148,7 +167,7 @@ function MMI.fit(m::CVGGLassoRegressor, verb::Int, X, y)
 
 
     fitresult = (coef = betas, x_transform = x_transform, y_transform = y_transform)
-    report = (best_param = λ_opt, best_λs = λs)
+    report = (best_param = λ_opt, best_λs = λs, param_max = lambda_max, tmp_intercept=tmp_intercept)
     # return
     return fitresult, nothing, report
 end

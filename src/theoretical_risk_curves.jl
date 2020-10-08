@@ -4,8 +4,8 @@ function _integrate_spectrum(h::Float64, γ, λ, f) #interpreted as point mass s
 end
 
 #interpreted as
-function _integrate_spectrum(h::Vector{Float64}, γ, λ, f)
-    mean(__integrate_spectrum.(h, γ, λ, f))
+function _integrate_spectrum(h::Distribution, γ, λ, f)
+    expectation(u->_integrate_spectrum(u, γ, λ, f), h)
 end
 
 function fixed_point_function(hs, γs, λs)
