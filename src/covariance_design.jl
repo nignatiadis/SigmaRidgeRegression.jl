@@ -9,12 +9,9 @@ function spectrum(mat)
     DiscreteNonParametric(eigs, probs)
 end
 
-nfeatures(cov::CovarianceDesign) = cov.p
+spectrum(cov::CovarianceDesign) = spectrum(get_Σ(cov))
 
-function (cov::CovarianceDesign)(p::Int)
-    cov = @set cov.p = p
-    cov
-end
+nfeatures(cov::CovarianceDesign) = cov.p
 
 function simulate_rotated_design(cov, n; rotated_measure = Normal())
     Σ = get_Σ(cov)
@@ -76,10 +73,19 @@ function spectrum(cov::ExponentialOrderStatsCovarianceDesign)
     DiscreteNonParametric(eigs, fill(1/p, p))
 end
 
-struct BlockCovarianceDesign{T, S <: CovarianceDesign{T}} <: CovarianceDesign{T}
+get_Σ(cov::ExponentialOrderStatsCovarianceDesign) = Diagonal(spectrum(cov))
+
+
+struct BlockCovarianceDesign{T, S <: CovarianceDesign{T}, G} <: CovarianceDesign{T}
     blocks::Vector{S}
-    groups::GroupedFeatures
+    groups::G
 end
+
+function BlockCovarianceDesign(blocks::Vector{S}) where S<:CovarianceDesign{Missing}
+    BlockCovarianceDesign(blocks, missing)
+end
+
+nfeatures(cov::BlockCovarianceDesign) = sum(nfeatures.(cov.blocks))
 
 function get_Σ(blockdesign::BlockCovarianceDesign)
     BlockDiagonal(get_Σ.(blockdesign.blocks))
@@ -90,4 +96,21 @@ function spectrum(blockdesign::BlockCovarianceDesign)
     spectra = spectrum.(blocks)
     mixing_prop = groups.ps ./ groups.p
     MixtureModel(spectra, mixing_prop)
+end
+
+
+
+
+# Set groups
+function set_groups(design::CovarianceDesign, p::Integer)
+    @set design.p = p
+end
+
+function set_groups(design::CovarianceDesign, groups::GroupedFeatures)
+    set_groups(design, nfeatures(groups))
+end
+
+function set_groups(blockdesign::BlockCovarianceDesign, groups::GroupedFeatures)
+    updated_blocks = set_groups.(blockdesign.blocks, groups.p)
+    BlockCovarianceDesign(updated_blocks, groups)
 end

@@ -109,7 +109,7 @@ end
 mutable struct MultiGroupRidgeRegressor{T,G<:GroupedFeatures} <:
                FixedLambdaGroupRidgeRegressor
     decomposition::Symbol
-    λ::T   #Named tuple 
+    λ::T   #Named tuple
     groups::G
     center::Bool
     scale::Bool
@@ -253,8 +253,8 @@ end
 Base.@kwdef mutable struct TunedRidgeRegressor{G,R,M,T} <: AbstractGroupRidgeRegressor
     ridge::G = SingleGroupRidgeRegressor(decomposition = :cholesky, λ = 1.0)
     tuning::T = DefaultTuning()
-    resampling::R = CV(nfolds = 5)
-    measure::M = l2
+    resampling::R = MLJ.CV(nfolds = 5, shuffle=true)
+    measure::M = MLJ.l2
 end
 
 
@@ -266,19 +266,27 @@ function MMI.fit(m::TunedRidgeRegressor, verb::Int, X, y)
     #y_transform = mach.fitresult.y_transform
 
     ridge_workspace = _workspace(mach.cache)
-    param_range, model_grid, param_max = _tuning_grid(m.tuning, ridge, mach)
+    param_range, model_grid, param_max = _tuning_grid(m.tuning, ridge, mach, m.resampling.rng)
 
-    tuned_model = TunedModel(
+    tuned_model = MLJ.TunedModel(
         model = ridge,
-        ranges = param_range,
-        tuning = Explicit(),
+        ranges = model_grid,
+        tuning = MLJ.Explicit(),
         resampling = m.resampling,
         measure = m.measure,
     )
 
-    tuned_mach = machine(tuned_model, X, y)
+    tuned_mach = MLJ.machine(tuned_model, X, y)
     fit!(tuned_mach)
 
+    _fitresult = tuned_mach.fitresult.fitresult
+    _cache = tuned_mach.fitresult.cache
+    best_λs = deepcopy(_workspace(_cache).λs)
+
+    tunedreport = tuned_mach.report
+    best_param = _main_hyperparameter_value(tunedreport.best_model)
+
+    tunedreport = (tunedreport..., best_param=best_param, best_λs = best_λs)
     # return
-    return tuned_mach.fitresult, tuned_mach.cache, tuned_mach.report
+    return _fitresult, _cache, tunedreport
 end

@@ -7,7 +7,7 @@ Start the Julia REPL (Julia version 1.5) and type `]` to activate the package ma
 ```{julia}
 instantiate
 ```
-This will automatically load all required julia dependencies. 
+This will automatically load all required Julia dependencies. 
 
 For the `cll.jl` file, a R installation (it will be called through `RCall`) is also required with an installation of the `MOFAdata` package.
 This package may be installed as follows:

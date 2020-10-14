@@ -20,7 +20,7 @@ function _default_hyperparameter_maximum(model::GroupLassoRegressor, fitted_mach
     maximum(_norms ./ groups_multiplier)
 end
 
-_default_param_min_ratio(::GroupLassoRegressor, fitted_machine) = 1e-3
+_default_param_min_ratio(::GroupLassoRegressor, fitted_machine) = 1e-5
 
 function _glasso_fit!(workspace, glasso::GroupLassoRegressor)
     @unpack η_reg, η_threshold, abs_tol, groups, maxiter, λ, groups_multiplier, truncate_to_zero = glasso
@@ -109,7 +109,7 @@ Base.@kwdef mutable struct CVGGLassoRegressor{G,S} <: AbstractGroupRegressor
 end
 
 function MMI.fit(m::CVGGLassoRegressor, verb::Int, X, y)
-    @unpack center, scale, groups, nfolds, engine = m
+    @unpack center, scale, groups, nfolds, eps, engine = m
     Xmatrix = MMI.matrix(X)
     if center || scale
         x_transform = StatsBase.fit(
@@ -137,10 +137,12 @@ function MMI.fit(m::CVGGLassoRegressor, verb::Int, X, y)
     @rput y
     @rput group_index
     @rput p
+    @rput eps
 
     if engine === :gglasso
         R"library(gglasso)"
-        R"gglasso_cv_fit <- cv.gglasso(Xmatrix, y, group=group_index, nfolds=$(nfolds), intercept=FALSE)"
+        R"set.seed(1)"
+        R"gglasso_cv_fit <- cv.gglasso(Xmatrix, y, group=group_index, nfolds=$(nfolds), intercept=FALSE, eps=eps)"
         R"betas <- coef(gglasso_cv_fit, s='lambda.min')[-1]"
         R"lambda_cv <- gglasso_cv_fit$lambda.min"
         R"lambda_max <- max(gglasso_cv_fit$lambda)"
