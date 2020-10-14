@@ -92,12 +92,19 @@ function range_and_grid(
     param_max,
     scale,
     resolution,
+    n,
+    rng
 )
     param_symbol = _main_hyperparameter(ridge)
     param_range =
         range(ridge, param_symbol, lower = param_min, upper = param_max, scale = scale)
     model_grid =
         MLJTuning.grid(ridge, [param_symbol], [MLJ.iterator(param_range, resolution)])
+
+    if length(model_grid) > n
+        model_grid = sample(rng, model_grid, n; replace = false)
+    end
+
     param_range, model_grid
 end
 
@@ -137,15 +144,27 @@ function MultiGroupRidgeRegressor(
 end
 
 
-function range_and_grid(ridge::MultiGroupRidgeRegressor, λ_min, λ_max, scale, n)
+function range_and_grid(ridge::MultiGroupRidgeRegressor, λ_min, λ_max, scale, resolution, n, rng)
     λ_names = [Meta.parse("(λ.$λ)") for λ in keys(ridge.λ)]
+    nparams = length(λ_names)
     λ_range =
         [range(ridge, λ, lower = λ_min, upper = λ_max, scale = scale) for λ in λ_names]
-    model_grid = MLJTuning.grid(ridge, λ_names, MLJ.iterator.(λ_range, n))
+    λ_product_grid = MLJ.iterator.(λ_range, resolution)
+    if nparams*log(resolution) > log(n)
+        tmp_idx = zeros(Int, nparams)
+        model_grid = [deepcopy(ridge) for i in Base.OneTo(n)]
+        for i in Base.OneTo(n)
+            sample!(rng, 1:resolution, tmp_idx)
+            clone = model_grid[i]
+            for k in eachindex(λ_names)
+                MLJ.recursive_setproperty!(clone, λ_names[k], λ_product_grid[k][tmp_idx[k]])
+            end
+        end
+    else
+        model_grid = MLJTuning.grid(ridge, λ_names, λ_product_grid)
+    end
     λ_range, model_grid
 end
-
-
 
 
 # Autotuning code
@@ -177,11 +196,8 @@ function _tuning_grid(tuning::DefaultTuning, model, fitted_machine, rng)
     end
 
     param_min = param_min_ratio * param_max
-    param_range, model_grid = range_and_grid(model, param_min, param_max, scale, resolution)
+    param_range, model_grid = range_and_grid(model, param_min, param_max, scale, resolution, n, rng)
 
-    if length(model_grid) > n
-        model_grid = sample(rng, model_grid, n; replace = false)
-    end
     param_range, model_grid, param_max
 end
 
