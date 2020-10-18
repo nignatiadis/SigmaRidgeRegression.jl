@@ -73,7 +73,7 @@ function spectrum(cov::ExponentialOrderStatsCovarianceDesign)
     DiscreteNonParametric(eigs, fill(1/p, p))
 end
 
-get_Σ(cov::ExponentialOrderStatsCovarianceDesign) = Diagonal(spectrum(cov))
+get_Σ(cov::ExponentialOrderStatsCovarianceDesign) = Diagonal(support(spectrum(cov)))
 
 
 struct BlockCovarianceDesign{T, S <: CovarianceDesign{T}, G} <: CovarianceDesign{T}
@@ -99,6 +99,9 @@ function spectrum(blockdesign::BlockCovarianceDesign)
 end
 
 
+function simulate_rotated_design(cov::BlockCovarianceDesign, n; rotated_measure = Normal())
+    hcat(simulate_rotated_design.(cov.blocks, n; rotated_measure=rotated_measure)...)
+end
 
 
 # Set groups
@@ -111,6 +114,6 @@ function set_groups(design::CovarianceDesign, groups::GroupedFeatures)
 end
 
 function set_groups(blockdesign::BlockCovarianceDesign, groups::GroupedFeatures)
-    updated_blocks = set_groups.(blockdesign.blocks, groups.p)
+    updated_blocks = set_groups.(blockdesign.blocks, groups.ps)
     BlockCovarianceDesign(updated_blocks, groups)
 end
