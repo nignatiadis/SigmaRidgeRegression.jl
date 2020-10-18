@@ -1,113 +1,46 @@
+using Pkg
+Pkg.activate(@__DIR__)
+using Pkg.Artifacts
 using CSV
 using DataFrames
 using StatsBase
 using SigmaRidgeRegression
-using Splines2
+using LaTeXStrings
 using LinearAlgebra
-
+using MLJ
 using Random
-msd = CSV.File(joinpath(@__DIR__,"dataset","YearPredictionMSD.txt"), header=false) |> DataFrame
-
+using ColorSchemes
 using Plots
+using StatsPlots
+using PGFPlotsX
+
+#------------------------------------------------------------------
+# Code that generated the Artifact file Artifacts.toml
+#------------------------------------------------------------------
+#using ArtifactUtils
+#add_artifact!(
+#           "Artifacts.toml",
+#           "YearPredictionMSD",
+#           "https://archive.ics.uci.edu/ml/machine-learning-databases/00203/YearPredictionMSD.txt.zip",
+#           force=true,
+#       )
+
+
+#--------------------------------------------------------------------------------------
+# Command below may take a while since it will automatically download the Million Song
+# Dataset from the UCI repository (around 400 MB).
+#--------------------------------------------------------------------------------------
+
+msd_filepath = joinpath(artifact"YearPredictionMSD", "YearPredictionMSD.txt")
+msd = CSV.File(msd_filepath, header=false) |> DataFrame
 
 
 
-
-msd_mat = Matrix(msd[:, 2:91])
-
-mean(msd_mat, dims=1)[1:12]
-
-var_features =  Matrix(msd[:, 14:25])
-cov_features = Matrix(msd[:, 26:91])
-
-cor_features = zeros(size(cov_features))
-cnt = 0
-for offset=1:11
-	for i=1:(12-offset)
-		global cnt
-		cnt = cnt + 1
-		cor_features[:,cnt] = cov_features[:,cnt] ./ sqrt.(var_features[:,i] .* var_features[:,i+offset])
-	end
-end 
-
-
-maximum(cor_features, dims=1)[12:21]
-
-msd_cov_svd = svd(cov_features)
-plot(msd_cov_svd.S)
-vline!([12])
-
-function subsampled_msd_analysis(n_subsample, feature_map, method; center=true,scale=true)
-	train_idx = 1:463_715
-	test_idx =  (1:51_630) .+ 463_715
-
-	train_idx = sample(train_idx, n_subsample, replace=false)
-	Y_train = msd[train_idx, 1]
-	Y_train_bar = mean(Y_train)
-	Y_train = Y_train .- Y_train_bar
-
-	X_train = Matrix(msd[train_idx, 2:91])
-	X_test = Matrix(msd[test_idx, 2:91])
-	Y_test = msd[test_idx, 1]
-
-	centering_transform = fit(ZScoreTransform, X_train; center=center, scale=scale, dims=1)
-	X_train_transformed = StatsBase.transform(centering_transform, X_train)
-	X_test_transformed = StatsBase.transform(centering_transform, X_test)
-
-	X_train_transformed, grp = feature_map(X_train_transformed)
-	X_test_transformed,  _ = feature_map(X_test_transformed)
-
-	fitted_method = fit(method, X_train_transformed, Y_train, grp)
-	preds = X_test_transformed*coef(fitted_method) .+ Y_train_bar
-	mse = mean( abs2.(preds .- Y_test) )
-	(mse=mse, fitted_method=fitted_method)
-end 
-
-
-
-
-function subsampled_msd_analysis(n_subsample, feature_map, methods; center=true,scale=true, seed=100)
-	Random.seed!(seed)
-
-	train_idx = 1:463_715
-	test_idx =  (1:51_630) .+ 463_715
-
-	train_idx = sample(train_idx, n_subsample, replace=false)
-	Y_train = msd[train_idx, 1]
-	Y_train_bar = mean(Y_train)
-	Y_train = Y_train .- Y_train_bar
-
-	X_train = Matrix(msd[train_idx, 2:91])
-	X_test = Matrix(msd[test_idx, 2:91])
-	
-	Y_test = msd[test_idx, 1]
-
-	X_train, grp = feature_map(X_train)
-	X_test, grp = feature_map(X_test)
-	
-	centering_transform = fit(ZScoreTransform, X_train; center=center, scale=scale, dims=1)
-	X_train_transformed = StatsBase.transform(centering_transform, X_train)
-	X_test_transformed = StatsBase.transform(centering_transform, X_test)
-	
-	res = []
-	for (method_name, method) in methods
-		fitted_method = fit(method, X_train_transformed, Y_train, grp)
-		preds = X_test_transformed*coef(fitted_method) .+ Y_train_bar
-		mse = mean( abs2.(preds .- Y_test) )
-		push!(res, (mse=mse, method_name = method_name, fitted_method=fitted_method))
-	end
-	res
-end 
-
-myfeatures = 
-
-identity_map(X) = (X, GroupedFeatures([12,78]))
-
-function correlation_map(X; noisegroups=10, noisefeatures=50)
+function feature_map(X) #; noisegroups=10, noisefeatures=50)
 	mean_features = X[:, 1:12]
 	var_features = X[:, 13:24]
 	sd_features = sqrt.(var_features)
-	cv_features = mean_features ./ sd_features
+	#cv_features = sd_features ./ abs.(mean_features)
 	cov_features = X[:, 25:90]
 	cor_features = zeros(size(cov_features))
 	cnt = 0
@@ -117,333 +50,186 @@ function correlation_map(X; noisegroups=10, noisefeatures=50)
 			cor_features[:,cnt] = cov_features[:,cnt] ./ sqrt.(var_features[:,i] .* var_features[:,i+offset])
 		end
 	end
-	noise_features = randn(size(X,1), noisegroups*noisefeatures )
-	grp = GroupedFeatures(vcat([12, 12, 12, 12, 66, 66], fill(noisefeatures, noisegroups)))
-	([mean_features var_features sd_features cv_features  cov_features cor_features noise_features], grp)
+	#noise_features = randn(size(X,1)#, noisegroups*noisefeatures )
+	grp = GroupedFeatures([12, 12, 66, 66]) #, fill(noisefeatures, noisegroups)))
+	(MLJ.table([mean_features sd_features cov_features cor_features]), grp)
 end
 
 
 
-
-loo_oneparam_ridge = GroupRidgeRegression(tuning=OneParamCrossValRidgeTuning())
-res1 = subsampled_msd_analysis(1000, identity_map, [("bla", loo_oneparam_ridge)], scale=false)
-
-res2 = subsampled_msd_analysis(5000, identity_map, [("bla", sigma_ridge)], scale=false)
-
-res3 = subsampled_msd_analysis(2000, correlation_map, [("bla", loo_oneparam_ridge)], scale=false)
-res5 = subsampled_msd_analysis(1000, correlation_map, [("bla", mgcv_reml_ridge)], scale=false)
-res5 = subsampled_msd_analysis(500, correlation_map, [("bla", mgcv_gcv_ridge)], scale=false)
-res5 = subsampled_msd_analysis(1000, correlation_map, [("bla", mgcv_ml_ridge)], scale=false)
-
-res4 = subsampled_msd_analysis(1000, correlation_map, [("bla", sigma_ridge)], scale=false)
-
-
-tmp = res4[1].fitted_method
-tmp.λs	
-sigma_ridge = GroupRidgeRegression(tuning=SigmaRidgeTuning())
-
-tmp = correlation_map(msd_mat)
-
-function polymap(d)
-	function poly(X)
-		Xs = hcat( hcat([X[:, 1:9].^k for k=1:d]...),  hcat([X[:, 10:90].^k for k=1:d]...))
-		grps = GroupedFeatures([fill(9,d); fill(9^2,d)])
-		(Xs, grps)
-	end 
-end
-
-
-
-
-
-loo_oneparam_ridge = GroupRidgeRegression(tuning=OneParamCrossValRidgeTuning())
-sigma_ridge = GroupRidgeRegression(tuning=SigmaRidgeTuning())
-mgcv_reml_ridge = GroupRidgeRegression(tuning=SigmaRidgeRegression.MGCVTuning())
-mgcv_ml_ridge = GroupRidgeRegression(tuning=SigmaRidgeRegression.MGCVTuning(method="ML"))
-mgcv_gcv_ridge = GroupRidgeRegression(tuning=SigmaRidgeRegression.MGCVTuning(method="GCV.Cp"))
-
-
-Random.seed!(10)
-res1 = subsampled_msd_analysis(1000, identity_map, loo_oneparam_ridge)
-res1 = subsampled_msd_analysis(1000, polymap(5), loo_oneparam_ridge)
-
-Random.seed!(10);res1 = subsampled_msd_analysis(100, polymap(2), loo_oneparam_ridge)
-Random.seed!(100);res1 = subsampled_msd_analysis(1000, polymap(1), sigma_ridge)
-Random.seed!(100); res1 = subsampled_msd_analysis(100, polymap(2), mgcv_reml_ridge)
-
-
-res1.fitted_method.λs
-
-Random.seed!(20)
-
-
-X_train
-
-
-
-n_subsample = 1000
-train_idx = 1:463_715
-test_idx =  (1:51_630) .+ 463_715
-
-train_idx = sample(train_idx, n_subsample, replace=false)
-Y_train = msd[train_idx, 1]
-Y_train_bar = mean(Y_train)
-Y_train = Y_train .- Y_train_bar
-
-X_train = Matrix(msd[train_idx, 2:91])
-X_test = Matrix(msd[test_idx, 2:91])
-Y_test = msd[test_idx, 1]
-
-centering_X = fit(ZScoreTransform, X_train; center=true, scale=true, dims=1)
-X_transformed = StatsBase.transform(centering_X, X_train)
-X_test_transformed = StatsBase.transform(centering_X, X_test)
-
-grp = 
-GroupRi
-
-
-fit1= fit(, X, Y_train, grp)
-
-predict(fit1, )
-
-
-
-fit2= fit(GroupRidgeRegression(tuning=SigmaRidgeTuning()), X, Y_train, grp)
-
-
-function predict(rdg::BasicGroupRidgeWorkspace, X)
-	X*rdg.β 
-end
-
-coef(rdg::BasicGroupRidgeWorkspace) = rdg.β_curr
-
-import StatsBase:coef
-
-
-
-
-function mse_given_beta(β)
-	Y_hat_sigma_ridge = X_test_transformed*β .+ Y_train_bar
-	mean(abs2.(Y_hat_sigma_ridge .- Y_test))
-end 
-
-
-mse_given_beta(coef(fit1))
-mse_given_beta(coef(fit2))
-mse_given_beta(coef(fit3))
-
-
-
-
-function mse_given_beta(β)
-	Y_hat_sigma_ridge = myf(X_test_transformed)*β .+ Y_train_bar
-	mean(abs2.(Y_hat_sigma_ridge .- Y_test))
-end 
-
-mgcv_lambdas = SigmaRidgeRegression.mgcv(X, Y_train, grp)
-
-fit3= fit(GroupRidgeRegression(tuning=mgcv_lambdas.λs), X, Y_train, grp)
-
-fit3.λs
-
-
-
-
-
-
-multiridge_lambdas = SigmaRidgeRegression.multiridge(X, Y_train, grp)
-
-
-
-
-
-
-
-
-
-
-struct GroupRidgeRegression{V, Vs<:AbstractVector{V}}
-	λs::Vs 
-end
-
-function fit(GroupRidgeRegression, X, Y, grp::GroupedFeatures)
-	
-end 
-GroupRidgeRegression(multiridge_lambdas)
-
-
-init_ridge = BasicGroupRidgeWorkspace(X=X, Y=Y_train, groups=grp)
-
-
-
-
-
-
-
-
-bla = GroupedRidgeRegression(tuning = OneParamCrossValRidgeTuning())
-
-res = fit(bla, X, Y_test, grp)
-
-res.λs
-
-import StatsBase:fit
-
-
-
-
- 
-
-X_test_transformed = StatsBase.transform(centering_X, X_test)
-
-
-struct SigmaRidgeRegression{I}
-	initializer::I
-end 
-	
-
-
-
-
-fit!(init_ridge)
-
-
-
-
-SigmaRidge
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-init_ridge = BasicGroupRidgeWorkspace(X=X, Y=Y_train, groups=grp)
-ridge_1 = fit!(init_ridge, OneParamCrossValRidgeTuning())
-
-loo_error(ridge_1)
-ridge_1.λs
-
-mean(abs2.(Y_train_bar .- Y_test))
-
-
-Y_hat = X_test_transformed*ridge_1.β_curr .+ Y_train_bar
-mean(abs2.(Y_hat .- Y_test))
-
-init_ridge2 = BasicGroupRidgeWorkspace(X=X, Y=Y_train, groups=grp)
-fit!(init_ridge2, λωλας_λ(init_ridge2))
-ridge_2 = fit!(init_ridge, SigmaRidgeTuning())
-ridge_2.λs
-ridge_2.cache
-
-
-mom = MomentTunerSetup(ridge_2)
-
-Y_hat_sigma_ridge = X_test_transformed*ridge_1.β_curr .+ Y_train_bar
-
-mean(abs2.(Y_hat_sigma_ridge .- Y_test))
-
-
-
-
-
-
-
-
-
+Y = Float64.(msd[:, 1])
+X, groups = feature_map(Matrix(msd[:, 2:91]))
 
 train_idx = 1:463_715
 test_idx =  (1:51_630) .+ 463_715
 
-train_idx = sample(train_idx, 10000, replace=false)
+single_ridge = SingleGroupRidgeRegressor(decomposition = :cholesky, groups=groups, λ=1.0, center=true, scale=true)
+loo_single_ridge = LooRidgeRegressor(ridge = deepcopy(single_ridge))
 
-Y_train = df[train_idx, 1]
-Y_train_bar = mean(Y_train)
-Y_train = Y_train .- Y_train_bar
+sigma_ridge = SigmaRidgeRegressor(groups=groups, decomposition = :cholesky, σ=0.01, center=true, scale=true)
+loo_sigmaridge = LooRidgeRegressor(ridge=deepcopy(sigma_ridge), tuning=SigmaRidgeRegression.DefaultTuning(scale=:linear, param_min_ratio=0.001))
 
-X_train = Matrix(df[train_idx, 2:91])
-X_train = X_train 
+multi_ridge = MultiGroupRidgeRegressor(groups; decomposition = :cholesky, center=true, scale=true)
+loo_multi_ridge = LooRidgeRegressor(ridge = deepcopy(multi_ridge), rng=MersenneTwister(1))
 
-
-
-# UPDATES 
-
+glasso = GroupLassoRegressor(groups=groups, decomposition = :cholesky, center=true, scale=true)
+holdout_glasso = TunedRidgeRegressor(ridge=deepcopy(glasso), resampling= Holdout(shuffle=true, rng=1), tuning=DefaultTuning(param_min_ratio=1e-5))
 
 
-X_test = Matrix(df[test_idx, 2:91])
-Y_test = df[test_idx, 1]
+ns_subsample = [200; 500; 1000]
+n_montecarlo = 20
+Random.seed!(1)
 
-
-
-
-centering_X = fit(ZScoreTransform, X_train; center=true, scale=true, dims=1)
-X = StatsBase.transform(centering_X, X_train)
-
-myf(X) = [X X.^2 X.^3]
-
-
-X
-grp = GroupedFeatures([9,9^2])
-
-
-X = myf(X)
-
-grp = GroupedFeatures([9,9^2, 9, 9^2, 9, 9^2])
-
-
-init_ridge = BasicGroupRidgeWorkspace(X=X, Y=Y_train, groups=grp)
-ridge_1 = fit!(init_ridge, OneParamCrossValRidgeTuning())
-
-loo_error(ridge_1)
-
-ridge_1.λs
-
-mean(abs2.(Y_train_bar .- Y_test))
-
-
-Y_hat = myf(X_test_transformed)*ridge_1.β_curr .+ Y_train_bar
-mean(abs2.(Y_hat .- Y_test))
-
-init_ridge2 = BasicGroupRidgeWorkspace(X=X, Y=Y_train, groups=grp)
-
-ridge_1 = fit!(init_ridge, OneParamCrossValRidgeTuning())
-
-tuner = MomentTunerSetup(ridge_1)
-
-σs = range(0,20, length=100)
-mypath = sigma_squared_path(ridge_1, tuner, σs.^2)
-
-plot(σs, mypath.loos, label="Leave-one-out", xlabel="sigmacv" )
-plot!(σs, true_mse, color="green", ylim=(85,94), label="true MSE" )
-
-plot(σs, mypath.λs, xlim=(0, 20), ylim=(0,2))
-vline!([ridge_2.cache.params.σ])
-plot(σs, mypath.λs, xlim=(0, 20), ylim=(0,2))
-mypath.βs
+mse_array = Array{Float64}(undef, length(ns_subsample), n_montecarlo, 4)
+time_array = Array{Float64}(undef, length(ns_subsample), n_montecarlo, 4)
+λs_array = Array{Any}(undef, length(ns_subsample), n_montecarlo, 4)
+for (k, n_subsample) in enumerate(ns_subsample)
+    for j in Base.OneTo(n_montecarlo)
+        train_idx_subsample = sample(train_idx, n_subsample, replace=false)
+        resampling_idx = [(train_idx_subsample, test_idx)]
+        for (i,mach) in enumerate([loo_sigmaridge, loo_single_ridge, loo_multi_ridge, holdout_glasso])
+            time_array[k,j,i] = @elapsed begin
+                _mach = machine(mach, X, Y)
+                _eval = evaluate!(_mach, resampling=resampling_idx, measure=l2)
+            end
+            mse_array[k,j,i] = _eval.measurement[1]
+            λs_array[k,j,i] = deepcopy(_mach.report.best_λs)
+        end
+    end
+end
 
 
 
 
-true_mse = [mse_given_beta(vec(mypath.βs[i,:])) for i=1:length(σs)]
+pgfplotsx()
+
+push!(PGFPlotsX.CUSTOM_PREAMBLE, raw"\usepackage{amsmath}")
+push!(PGFPlotsX.CUSTOM_PREAMBLE, raw"\usepackage{amssymb}")
+push!(PGFPlotsX.CUSTOM_PREAMBLE, raw"\usepackage{bm}")
+push!(PGFPlotsX.CUSTOM_PREAMBLE, raw"\newcommand{\blambda}{\bm{\lambda}}")
+push!(PGFPlotsX.CUSTOM_PREAMBLE, raw"\newcommand{\risk}[1]{\bm{R}(#1)}")
+push!(PGFPlotsX.CUSTOM_PREAMBLE, raw"\usepackage[bbgreekl]{mathbbol}")
+push!(PGFPlotsX.CUSTOM_PREAMBLE, raw"\newcommand{\sigmacv}{\bbsigma}")
 
 
- 
-ridge_2 = fit!(init_ridge,  tuner, SigmaRidgeTuning())
+_orange =   RGB{Float64}(0.933027,0.665164,0.198652)
+_orange2 =  RGB{Float64}(0.85004,0.540122,0.136212)
 
-ridge_2.λs
+method_names = [L"\sigmacv-\textrm{Ridge}" L"\textrm{Single Ridge}" L"\textrm{Multi Ridge}" L"\textrm{Group Lasso}"]
+
+_thickness_scaling = 1.8
+mse_plot = plot(
+dotplot(method_names, mse_array[1,:,:],
+    title=L"n\;=\;%$(ns_subsample[1])",
+    frame = :box, grid=nothing,
+    yguide = "Mean squared error",
+    label=nothing,
+    markerstrokecolor=_orange2,
+    markerstrokewidth=0.5,
+    thickness_scaling = _thickness_scaling,
+    ylim = (88,141),
+    color=_orange),
+dotplot(method_names, mse_array[2,:,:],
+    title=L"n\;=\;%$(ns_subsample[2])",
+    frame = :box, grid=nothing,
+    label=nothing,
+    markerstrokecolor=_orange2,
+    markerstrokewidth=0.5,
+    ylim = (88,141),
+    thickness_scaling = _thickness_scaling,
+    color=_orange),
+dotplot(method_names, mse_array[3,:,:],
+    title=L"n\;=\;%$(ns_subsample[3])",
+    frame = :box, grid=nothing,
+    label=nothing,
+    markerstrokecolor=_orange2,
+    markerstrokewidth=0.5,
+    thickness_scaling = _thickness_scaling,
+    ylim = (88,141),
+    color=_orange), size=(1650,400), layout=(1,3))
 
 
+savefig(mse_plot, "one_million_songs_mse.pdf")
 
-Y_hat_sigma_ridge = myf(X_test_transformed)*ridge_1.β_curr .+ Y_train_bar
+time_plot = plot(
+        dotplot(method_names, time_array[1,:,:],
+            title=L"n\;=\;%$(ns_subsample[1])",
+            frame = :box, grid=nothing,
+            yguide = "Time (seconds)",
+            label=nothing,
+            markerstrokecolor=_orange2,
+            markerstrokewidth=0.5,
+            ylim = (-0.5,10.5),
+            thickness_scaling = _thickness_scaling,
+            color=_orange),
+        dotplot(method_names, time_array[2,:,:],
+            title=L"n\;=\;%$(ns_subsample[2])",
+            frame = :box, grid=nothing,
+            label=nothing,
+            markerstrokecolor=_orange2,
+            markerstrokewidth=0.5,
+            thickness_scaling = _thickness_scaling,
+            ylim = (-0.5,10.5),
+            color=_orange),
+        dotplot(method_names, time_array[3,:,:],
+            title=L"n\;=\;%$(ns_subsample[3])",
+            frame = :box, grid=nothing,
+            label=nothing,
+            markerstrokecolor=_orange2,
+            markerstrokewidth=0.5,
+            thickness_scaling = _thickness_scaling,
+            ylim = (-0.5,10.5),
+            color=_orange), size=(1650,400), layout=(1,3))
+
+savefig(time_plot, "one_million_songs_time.pdf")
 
 
+_trunc = 20
 
-mean(abs2.(Y_hat_sigma_ridge .- Y_test))
+λs_mean = min.(getindex.(λs_array,1), 20)
+λs_std = min.(getindex.(λs_array,2), 20)
+λs_cov = min.(getindex.(λs_array,3), 20)
+λs_cor = min.(getindex.(λs_array,4), 20)
+
+λs_sigma_ridge = [λs_mean[1,:,1] λs_std[1,:,1] λs_cov[1,:,1] λs_cor[1,:,1]]
+
+feature_names = ["mean" "std"  "cov" "cor"]
+λs_names = [L"\hat{\lambda}_{\textrm{%$n}}"  for n in feature_names]
+
+
+λ_plot_params = (frame = :box, grid=nothing,
+    label="",
+    markerstrokecolor=:purple,
+    markerstrokewidth=0.5,
+    markercolor= RGB{Float64}(205/256,153/256,255/256),
+    thickness_scaling = 1.7,
+    ylim = (-0.9,_trunc + 0.8))
+
+#λ_yguide=L"\min\{\widehat{\lambda},20\}",
+
+method_names_short = [L"\sigmacv-\textrm{Ridge}" L"\textrm{Single}" L"\textrm{Multi}" L"\textrm{GLasso}"]
+
+
+plot(
+dotplot(method_names_short, λs_mean[1,:,:]; yguide=L"\min\{\widehat{\lambda},20\}", title=λs_names[1]),
+dotplot(method_names_short, λs_std[1,:,:], title=λs_names[2]),
+dotplot(method_names_short, λs_cov[1,:,:], title=λs_names[3]),
+dotplot(method_names_short, λs_cor[1,:,:], title=λs_names[4]),
+size=(1500,270), layout=(1,4); λ_plot_params...)
+savefig("one_million_song_lambdas_n200.pdf")
+
+plot(
+dotplot(method_names_short, λs_mean[2,:,:]; yguide=L"\min\{\widehat{\lambda},20\}"),
+dotplot(method_names_short, λs_std[2,:,:]),
+dotplot(method_names_short, λs_cov[2,:,:]),
+dotplot(method_names_short, λs_cor[2,:,:]),
+size=(1500,260), layout=(1,4); λ_plot_params...)
+savefig("one_million_song_lambdas_n1000.pdf")
+
+plot(
+dotplot(method_names_short, λs_mean[3,:,:]; yguide=L"\min\{\widehat{\lambda},20\}"),
+dotplot(method_names_short, λs_std[3,:,:]),
+dotplot(method_names_short, λs_cov[3,:,:]),
+dotplot(method_names_short, λs_cor[3,:,:]),
+size=(1500,260), layout=(1,4); λ_plot_params...)
+savefig("one_million_song_lambdas_n5000.pdf")

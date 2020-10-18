@@ -3,16 +3,16 @@
 
 ## Setup
 
-Start the Julia REPL (Julia version 1.5) and type `]` to activate the package manager. Then type and enter:
-```{julia}
+Start the `Julia` REPL (Julia version 1.5) in this folder and type `]` to activate the package manager. Then type and enter:
+```julia
 instantiate
 ```
 This will automatically load all required Julia dependencies. 
 
 For the `cll.jl` file, a R installation (it will be called through `RCall`) is also required with an installation of the `MOFAdata` package.
-This package may be installed as follows:
+This package may be installed from within `R` as follows:
 
-```{r}
+```r
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
@@ -21,6 +21,8 @@ BiocManager::install("MOFAdata")
 
 ## File description
 
-* motivation.jl
-* oracle_risks.jl: 
-* cll.jl
+* `motivation.jl`: Code to reproduce Figures 1 and 2.
+* `oracle_risks.jl`: Code to reproduces Figures 4 and S1.
+* `cll.jl`: Code to reproduce Tables 1 and 2.
+* `million_songs.jl`: Code to reproduce Figures 5 and 6.
+* `simulations.jl`: Code to reproduce ______

@@ -25,7 +25,6 @@ function theoretical_and_realized_mse(γs, αs, design::BlockCovarianceDesign; n
     design = set_groups(design, grp)
     #design = IdentityCovarianceDesign(grp.p)
     #hs = [spectrum(design);spectrum(design)]
-    @show "hiii"
     hs = spectrum.(design.blocks)
 
     λs1 = SigmaRidgeRegression.optimal_ignore_second_group_λs(γs, αs)
@@ -83,7 +82,6 @@ function oracle_risk_plot(
     αs_squared = ratio_squared .* sum_alpha_squared
     bs_squared = reverse(ratio_squared) .* sum_alpha_squared
 
-    @show "hello"
     risks = [
         theoretical_and_realized_mse(
             γs,
@@ -96,7 +94,6 @@ function oracle_risk_plot(
     theoretical_risks = vcat(map(r -> r.theoretical, risks)...) .- 1
     empirical_risks = vcat(map(r -> r.empirical, risks)...) .- 1
 
-    @show "hii"
     labels =
         [L"$\;$Optimal $\blambda = (\lambda, \infty)$" L"$\;$Optimal $\blambda = (\lambda, \lambda)$"  L"$\;$Optimal $\blambda = (\lambda_1, \lambda_2)$"]
     #colors = reshape(colorschemes[:seaborn_deep6][1:3], 1, 3)
