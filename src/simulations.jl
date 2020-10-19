@@ -18,31 +18,28 @@ Base.@kwdef struct RandomLinearResponseModel <: AbstractResponseModel
 end
 
 
-function (resp::RandomLinearResponseModel)(X_train, X_test)
-    βs = random_betas(resp.grp, resp.αs) #todo, allow other noise dbn.
-    Y_train = X_train * βs
-    Y_test = X_test * βs
-    Y_train, Y_test, βs
+function (resp::RandomLinearResponseModel)(X)
+    β = random_betas(resp.grp, resp.αs) #todo, allow other noise dbn.
+    Xβ = X * β
+    Xβ, β
 end
 
-Base.@kwdef struct GroupRidgeSimulationSettings{C,R}
-    grp::GroupedFeatures
+Base.@kwdef struct GroupRidgeSimulationSettings{C,R,D}
+    groups::GroupedFeatures
     Σ::C
     response_model::R
-    response_noise = Normal()
-    σ::Float64 = 1.0
+    response_noise::D = Normal()
     ntest::Int = 10000
     ntrain::Int
     iid_measure = Normal()
 end
 
 Base.@kwdef struct GroupRidgeSimulation
-    grp::GroupedFeatures
-    X_test::Matrix{Float64}
-    Y_test::Vector{Float64}
-    X_train::Matrix{Float64}
-    Y_train::Vector{Float64}
-    βs = nothing
+    groups::GroupedFeatures
+    X::Matrix{Float64}
+    Y::Vector{Float64}
+    resampling_idx = nothing
+    β = nothing
 end
 
 
@@ -50,29 +47,25 @@ end
 function simulate(group_simulation::GroupRidgeSimulationSettings)
     ntrain = group_simulation.ntrain
     ntest = group_simulation.ntest
-    response_model = group_simulation.response_model
-    response_noise = group_simulation.response_noise
+    ntotal = ntrain + ntest
+    @unpack response_model, response_noise = group_simulation
 
-    X_train = simulate_rotated_design(
+    X = simulate_rotated_design(
         group_simulation.Σ,
-        ntrain;
+        ntotal;
         rotated_measure = group_simulation.iid_measure,
     )
-    X_test = simulate_rotated_design(
-        group_simulation.Σ,
-        ntest;
-        rotated_measure = group_simulation.iid_measure,
-    )
-    Y_train, Y_test, βs = response_model(X_train, X_test)
-    Y_train = Y_train .+ rand(response_noise, ntrain)
-    Y_test = Y_test .+ rand(response_noise, ntest)
+
+    Xβ, β = response_model(X)
+    Y = Xβ .+ rand(response_noise, ntotal)
+
+    resampling_idx = [(1:ntrain, (ntrain+1):ntotal)]
 
     GroupRidgeSimulation(;
-        grp = group_simulation.grp,
-        X_train = X_train,
-        X_test = X_test,
-        Y_train = Y_train,
-        Y_test = Y_test,
-        βs = βs,
+        groups = group_simulation.groups,
+        X=X,
+        Y=Y,
+        resampling_idx = resampling_idx,
+        β = β,
     )
 end
