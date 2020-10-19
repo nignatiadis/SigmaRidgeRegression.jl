@@ -1,14 +1,16 @@
 using Pkg
 Pkg.activate(@__DIR__)
 using SigmaRidgeRegression
-using Plots
 using StatsBase
 using Statistics
-using LaTeXStrings
 using Random
 using MLJ
 using Distributions
+using DrWatson
+using JLD2
 
+opt_no = parse(Int64, ARGS[1])
+@show opt_no
 
  # helper functions
 function _merge(grp::GroupedFeatures; groups_goal = 2)
@@ -27,7 +29,7 @@ end
 
 
 
-function single_simulation(sim; Ks=Ks)
+function single_simulation(sim; Ks=Ks, save=true)
     res = []
     sim_name = randstring(16)
 
@@ -83,6 +85,9 @@ function single_simulation(sim; Ks=Ks)
               sim_name = sim_name)
         )
     end
+    if save
+        @save "simulation_results/$(sim_name).jld2" save
+    end
     res
 end
 
@@ -95,17 +100,27 @@ Ks = 2 .^ (1:5)
 p = 32*25
 
 ns = Int.([p/2; p; 2p])
+
 groups = GroupedFeatures(fill(25, 32))
 
 ar1 = SigmaRidgeRegression.AR1Design(p, 0.8)
 id = IdentityCovarianceDesign(p)
 
-uninformative_response_model = RandomLinearResponseModel(αs = fill(1.0,32), grp = groups)
-informative_response_model = RandomLinearResponseModel(αs = sqrt.((0:31)./3.1), grp = groups)
+#uninformative_response_model = RandomLinearResponseModel(αs = fill(1.0,32), grp = groups)
+informative_response_model = RandomLinearResponseModel(αs = (0:31)./3.1, grp = groups)
 
 
-n = ns[3]
-Σ = id
-sim = GroupRidgeSimulationSettings(groups=groups, Σ=ar1, response_noise = Normal(0,5), response_model=informative_response_model, ntrain = n)
+all_opts = dict_list(Dict(:n => ns, :cov => [ar1, id]))
+opt = all_opts[opt_no]
 
-blup = single_simulation(sim)
+n = opt[:n]
+@show n
+Σ = opt[:cov]
+@show Σ
+nreps = 100
+sim = GroupRidgeSimulationSettings(groups=groups, Σ=id, response_noise = Normal(0,5), response_model=informative_response_model, ntrain = n)
+
+for i in Base.OneTo(nreps)
+    @show i
+    single_simulation(sim)
+end
