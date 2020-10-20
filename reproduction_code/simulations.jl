@@ -86,7 +86,7 @@ function single_simulation(sim; Ks=Ks, save=true)
         )
     end
     if save
-        @save "simulation_results/$(sim_name).jld2" save
+        @save "simulation_results/$(sim_name).jld2" res
     end
     res
 end
