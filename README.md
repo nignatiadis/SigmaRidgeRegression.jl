@@ -1,7 +1,3 @@
 # SigmaRidgeRegression.jl
 
-<img src="sigmaridge_logo.png" width="370">
-
-
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://nignatiadis.github.io/SigmaRidgeRegression.jl/dev)
-
+Automatically and optimally-tuned Ridge regression when the features may be partitioned into groups.

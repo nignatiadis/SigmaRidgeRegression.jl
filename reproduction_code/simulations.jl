@@ -117,8 +117,8 @@ n = opt[:n]
 @show n
 Σ = opt[:cov]
 @show Σ
-nreps = 100
-sim = GroupRidgeSimulationSettings(groups=groups, Σ=id, response_noise = Normal(0,5), response_model=informative_response_model, ntrain = n)
+nreps = 300
+sim = GroupRidgeSimulationSettings(groups=groups, Σ=Σ, response_noise = Normal(0,5), response_model=informative_response_model, ntrain = n)
 
 for i in Base.OneTo(nreps)
     @show i
