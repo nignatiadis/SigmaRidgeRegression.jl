@@ -68,20 +68,19 @@ function WoodburyRidgePredictor(X)
 end
 
 
-#Hi Tim,
 
 #It would be very useful if there could be an implementation of
 #```julia
 #ldiv!(dest::AbstracMatrix, W::AbstractWoodbury, B::AbstractMatrix)
 #```
-#Right now I think this only works with `AbstractVector`. Before implementing and filing a pull request, I was wondering whether you think it is an OK approach to 
+#Right now I think this only works with `AbstractVector`. Before implementing and filing a pull request, I was wondering whether you think it is an OK approach to
 
 #```julia
-# for i=1:ncols 
+# for i=1:ncols
 #      ldiv!(view(dest, :, i), A, view(B,:,i))
 #end
 #```
-#------------------------------------------------------------------------ 
+#------------------------------------------------------------------------
 # TODO: Fix the following two things upstream on WoodburyMatrices.jl
 #------------------------------------------------------------------------
 function _ldiv!(dest, W::SymWoodbury, A::Diagonal, B)
@@ -160,7 +159,7 @@ end
 
 ngroups(rdg::BasicGroupRidgeWorkspace) = ngroups(rdg.groups)
 
-# StatsBase.jl interace 
+# StatsBase.jl interace
 coef(rdg::BasicGroupRidgeWorkspace) = rdg.β_curr
 islinear(rdg::BasicGroupRidgeWorkspace) = true
 leverage(rdg::BasicGroupRidgeWorkspace) = rdg.leverage_store
@@ -195,8 +194,8 @@ end
 
 """
     λωλας_λ(rdg; multiplier=0.1)
-    
-Implements the Panagiotis Lolas rule of thumb for picking an optimal λ.    
+
+Implements the Panagiotis Lolas rule of thumb for picking an optimal λ.
 """
 function λωλας_λ(rdg; multiplier = 0.1)
     multiplier * rdg.p^2 / rdg.n / trace_XtX(rdg.XtXpΛ_chol) #TODO 2s

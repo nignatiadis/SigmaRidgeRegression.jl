@@ -87,7 +87,7 @@ loocv_ridge_machine = machine(loocv_ridge, X, Y)
 @time fit!(loocv_ridge_machine)
 
 λ_max = loocv_ridge_machine.report.param_max
-λ_range = range(single_group_ridge_reg, :λ, lower=loocv_ridge.tuning.param_min_ratio*λ_max, upper=λ_max, scale=loocv_ridge.tuning.scale)
+λ_range = loocv_ridge_machine.report.param_range
 
 ## Compare against brute froce predictions
 loocv_ridge_bruteforce = TunedModel(model = single_group_ridge_reg,
