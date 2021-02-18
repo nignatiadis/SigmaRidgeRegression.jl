@@ -1,5 +1,9 @@
 # SigmaRidgeRegression.jl
 
+[![Build Status](https://github.com/nignatiadis/SigmaRidgeRegression.jl/workflows/CI/badge.svg)](https://github.com/nignatiadis/SigmaRidgeRegression.jl/actions)
+[![Coverage](https://codecov.io/gh/nignatiadis/SigmaRidgeRegression.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/nignatiadis/SigmaRidgeRegression.jl)
+
+
 Automatically and optimally-tuned Ridge regression when the features may be partitioned into groups.
 
 See the manuscript below for a theoretical description of the method.
