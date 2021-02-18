@@ -97,7 +97,7 @@ end
 
 
 #-----------------------------------------------------------------------
-function ldiv!(Y::AbstractMatrix, A::SymWoodbury, B::AbstractMatrix)
+function LinearAlgebra.ldiv!(Y::AbstractMatrix, A::SymWoodbury, B::AbstractMatrix)
     ncols = size(B, 2)
     for i = 1:ncols
         ldiv!(view(Y, :, i), A, view(B, :, i))

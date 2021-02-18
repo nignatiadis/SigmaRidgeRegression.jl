@@ -38,6 +38,7 @@ function MMI.selectrows(X::Tables.MatrixTable, r)
     _names = getfield(X, :names)
     MMI.table(new_matrix; names = _names)
 end
+
 #----------------------------------------------------------------------------
 
 include("nnls.jl")
@@ -51,6 +52,7 @@ include("theoretical_risk_curves.jl")
 include("mmi.jl")
 include("mmi_sigmaridge.jl")
 include("grouplasso.jl")
+include("datasets/CLLData/CLLData.jl")
 
 export GroupedFeatures,
     ngroups,
