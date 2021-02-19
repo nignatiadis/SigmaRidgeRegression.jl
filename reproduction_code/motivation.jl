@@ -39,7 +39,6 @@ loo_sigma_ridge = LooSigmaRidgeRegressor(; groups=grp, center=false, scale=false
 
 loo_sigmaridge_machine = machine(loo_sigma_ridge, MLJ.table(X), Y)
 
-fit!(loo_ridge_machine)
 fit!(loo_sigmaridge_machine)
 
 σs = loo_sigmaridge_machine.report.params
@@ -50,8 +49,13 @@ param_subset = loo_sigmaridge_machine.report.params .<= 6.2
 λs_subset = λs[param_subset, :]
 
 βs_list = [
-    fit!(machine(SigmaRidgeRegressor(; groups=grp, σ=σ), MLJ.table(X), Y)).fitresult.coef
-    for σ in σs
+    fit!(
+        machine(
+            SigmaRidgeRegressor(; groups=grp, σ=σ, center=false, scale=false),
+            MLJ.table(X),
+            Y,
+        ),
+    ).fitresult.coef for σ in σs
 ]
 βs = Matrix(hcat(βs_list...)')
 
