@@ -1,14 +1,23 @@
 abstract type FixedLambdaGroupRidgeRegressor <: AbstractGroupRidgeRegressor end
 
 """
-    SingleGroupRidgeRegressor(; decomposition, λ, groups)
+    SingleGroupRidgeRegressor(; λ,
+                                decomposition = :default,
+                                center = true,
+                                scale = true)
+
+Type representing vanilla Ridge regression with hyperparameter `λ`.
+`center` and `scale` (default `true` for both) control whether the response and
+features should be centered and scaled first (make sure that `center=true` if the
+model is supposed to have an intercept!). `decomposition` can be one of `:default`,
+`:cholesky` or `:woodbury` and determines how the linear system is solved.
 """
 Base.@kwdef mutable struct SingleGroupRidgeRegressor{T,G} <: FixedLambdaGroupRidgeRegressor
     decomposition::Symbol = :default
     λ::T = 1.0
     groups::G = nothing
-    center::Bool = false
-    scale::Bool = false
+    center::Bool = true
+    scale::Bool = true
 end
 
 _main_hyperparameter(::SingleGroupRidgeRegressor) = :λ
@@ -69,7 +78,7 @@ function MMI.update(
     X,
     y,
 )
-    new_λ = model.λ
+    new_λ = _main_hyperparameter_value(model)
     StatsBase.fit!(old_cache, new_λ)
     βs = StatsBase.coef(old_cache)
     fitresult = (
@@ -120,26 +129,21 @@ end
 mutable struct MultiGroupRidgeRegressor{T,G<:GroupedFeatures} <:
                FixedLambdaGroupRidgeRegressor
     decomposition::Symbol
-    λ::T   #Named tuple
+    λs::T   #Named tuple
     groups::G
     center::Bool
     scale::Bool
 end
 
-_main_hyperparameter(::MultiGroupRidgeRegressor) = :λ
+_main_hyperparameter(::MultiGroupRidgeRegressor) = :λs
 _groups(m::MultiGroupRidgeRegressor, p) = m.groups
 
-function MultiGroupRidgeRegressor(groups::GroupedFeatures; kwargs...)
-    ngr = ngroups(groups)
-    MultiGroupRidgeRegressor(groups, ones(ngr); kwargs...)
-end
-
-function MultiGroupRidgeRegressor(
+function MultiGroupRidgeRegressor(;
     groups::GroupedFeatures,
-    λs::AbstractVector;
+    λs::AbstractVector = ones(ngr),
     decomposition = :default,
-    center = false,
-    scale = false,
+    center = true,
+    scale = true,
 )
     ngr = ngroups(groups)
     λ_expr = Tuple(Symbol.(:λ, Base.OneTo(ngr)))
@@ -149,7 +153,7 @@ end
 
 
 function range_and_grid(ridge::MultiGroupRidgeRegressor, λ_min, λ_max, scale, resolution, n, rng)
-    λ_names = [Meta.parse("(λ.$λ)") for λ in keys(ridge.λ)]
+    λ_names = [Meta.parse("(λs.$λ)") for λ in keys(ridge.λs)]
     nparams = length(λ_names)
     λ_range =
         [range(ridge, λ, lower = λ_min, upper = λ_max, scale = scale) for λ in λ_names]
@@ -227,12 +231,18 @@ end
 
 
 """
-Use leave-one-out-cross-validation to choose over
-group-specific Ridge-penalty matrices
-of the form, i.e., over ``λ \\in (0,∞)^K``.
+    LooRidgeRegressor(;ridge,
+                       tuning = DefaultTuning(),
+                       rng = Random.GLOBAL_RNG)
+
+
+A MLJ model that wraps a `ridge` model such as `SigmaRidgeRegressor` and tunes
+its parameters by leave-one-out-cross-validation with `tuning` settings defaulting to
+[`DefaultTuning`](@ref). In case there is randomness in choosing the search space of
+hyperparameters, then the `rng` may be specified (defaults to `Random.GLOBAL_RNG`).
 """
 Base.@kwdef mutable struct LooRidgeRegressor{G,T} <: AbstractGroupRidgeRegressor
-    ridge::G = SingleGroupRidgeRegressor(decomposition = :cholesky, λ = 1.0)
+    ridge::G = SingleGroupRidgeRegressor()
     tuning::T = DefaultTuning()
     rng = Random.GLOBAL_RNG
 end

@@ -3,8 +3,8 @@ Base.@kwdef mutable struct GroupLassoRegressor{G,P,T<:Number} <: AbstractGroupRe
     groups::G
     groups_multiplier::P = sqrt.(groups.ps) ./ sqrt(groups.p)
     λ::T = 1.0
-    center::Bool = false
-    scale::Bool = false
+    center::Bool = true
+    scale::Bool = true
     maxiter::Int = 100
     η_reg::T = 1e-5
     η_threshold::T = 1e-2
@@ -60,8 +60,8 @@ function MMI.fit(m::GroupLassoRegressor, verb::Int, X, y)
     @unpack decomposition, center, scale = m
     Xmatrix = MMI.matrix(X)
     p = size(Xmatrix, 2)
-    m_tmp = MultiGroupRidgeRegressor(
-        m.groups;
+    m_tmp = MultiGroupRidgeRegressor(;
+        groups = m.groups,
         decomposition = decomposition,
         scale = scale,
         center = center,

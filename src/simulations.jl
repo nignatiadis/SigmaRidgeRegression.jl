@@ -1,5 +1,15 @@
 abstract type AbstractResponseModel end
 
+
+"""
+    random_betas(gr::GroupedFeatures, αs)
+
+Suppose `gr` consists of ``K`` groups with ``p_1, \\dotsc, p_K`` features each.
+Then this returns a random vector of βs of length ``\\sum p_g``,
+where for `j` in the `g`-th group
+we draw (independent) ``β_j \\sim N(0, α_g^2/p_g)``.
+``α_g`` is the `g`-th element of the vectpr `αs`.
+"""
 function random_betas(gr::GroupedFeatures, αs)
     ps = gr.ps
     βs = zeros(eltype(αs), gr.p)

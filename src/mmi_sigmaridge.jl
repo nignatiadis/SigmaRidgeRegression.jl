@@ -1,11 +1,13 @@
 """
-    SigmaRidgeRegressor(; decomposition, groups, σ, center, scale)
+    SigmaRidgeRegressor(; decomposition, groups, σ, center, scale, init_model)
 
 A MLJ model that fits σ-Ridge Regression with `groups` and parameter `σ`.
 `center` and `scale` (default `true` for both) control whether the response and
 features should be centered and scaled first (make sure that `center=true` if the
 model is supposed to have an intercept!). `decomposition` can be one of `:default`,
-`:cholesky` or `:woodbury` and determines how the linear system is solved.
+`:cholesky` or `:woodbury` and determines how the linear system is solved. `init_model`
+is the initial model used to define the Method of Moments map from `σ` to `λ`; it defaults
+to leave-one-out ridge without groups.
 """
 Base.@kwdef mutable struct SigmaRidgeRegressor{G,T,M} <:
                            SigmaRidgeRegression.AbstractGroupRidgeRegressor
@@ -14,11 +16,11 @@ Base.@kwdef mutable struct SigmaRidgeRegressor{G,T,M} <:
     σ::T = 1.0
     center::Bool = true
     scale::Bool = true
-    init_model::M = SingleGroupRidgeRegressor(
+    init_model::M = LooRidgeRegressor(;ridge=SingleGroupRidgeRegressor(
         decomposition = decomposition,
         groups = groups,
         center = center,
-        scale = scale,
+        scale = scale,)
     )
 end
 
@@ -41,9 +43,9 @@ function MMI.fit(m::SigmaRidgeRegressor, verb::Int, X, y)
     σ = m.σ
     λs = SigmaRidgeRegression.get_λs(mom, abs2(σ))
 
-    multiridge = MultiGroupRidgeRegressor(
-        groups,
-        λs;
+    multiridge = MultiGroupRidgeRegressor(;
+        groups=groups,
+        λs=λs,
         decomposition = decomposition,
         center = center,
         scale = scale,
@@ -80,9 +82,9 @@ function MMI.update(
 
     σ = model.σ
     λs = SigmaRidgeRegression.get_λs(mom, abs2(σ))
-    multiridge = MultiGroupRidgeRegressor(
-        groups,
-        λs;
+    multiridge = MultiGroupRidgeRegressor(;
+        groups=groups,
+        λs=λs,
         decomposition = decomposition,
         center = center,
         scale = scale,
@@ -99,9 +101,18 @@ function MMI.update(
     return fitresult, cache, NamedTuple{}()
 end
 
+"""
+    LooSigmaRidgeRegressor(; kwargs...)
+
+Convenience constructors and type-alias for  `LooRidgeRegressor{<:SigmaRidgeRegressor}`.
+Equivalent to `LooRidgeRegressor(;ridge= SigmaRidgeRegressor())` with `kwargs`
+passed to both `LooRidgeRegressor` and `SigmaRidgeRegressor`.
+"""
 const LooSigmaRidgeRegressor =  LooRidgeRegressor{<:SigmaRidgeRegressor}
 
-function LooSigmaRidgeRegressor(; kwargs...)
-    sigma_ridge = SigmaRidgeRegressor(;kwargs...)
-    LooRidgeRegressor(ridge=deepcopy(sigma_ridge))
+function LooSigmaRidgeRegressor(;
+             tuning = DefaultTuning(),
+             rng = Random.GLOBAL_RNG, kwargs...)
+             sigma_ridge = SigmaRidgeRegressor(;kwargs...)
+    LooRidgeRegressor(;ridge=deepcopy(sigma_ridge), tuning=tuning, rng=rng)
 end

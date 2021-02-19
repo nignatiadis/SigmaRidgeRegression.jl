@@ -79,7 +79,7 @@ fit!(cvgglasso_machine)
 cvgglasso_machine.report.param_max
 cvgglasso_machine.report.tmp_intercept
 
-multiridge = MultiGroupRidgeRegressor(groups, cvgglasso_machine.report.best_λs)
+multiridge = MultiGroupRidgeRegressor(;groups=groups, λs=cvgglasso_machine.report.best_λs)
 multiridge_machine = machine(multiridge, Xstand, Ystand)
 fit!(multiridge_machine)
 

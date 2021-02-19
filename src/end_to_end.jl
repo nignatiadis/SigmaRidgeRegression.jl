@@ -4,7 +4,7 @@ abstract type AbstractGroupRidgeRegressor <: AbstractGroupRegressor end
 
 function StatsBase.fit(grp_ridge::AbstractGroupRidgeRegressor, X, Y, grp::GroupedFeatures)
     decomposition = grp_ridge.decomposition
-    tuning = grp_ridge.λ
+    tuning = _main_hyperparameter_value(grp_ridge)
     nobs = length(Y)
     if decomposition === :default
         decomposition = (nfeatures(grp) <= 4*nobs) ? :cholesky : :woodbury

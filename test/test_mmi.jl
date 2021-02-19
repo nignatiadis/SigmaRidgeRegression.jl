@@ -24,7 +24,7 @@ single_group_ridge_reg_woodbury = SingleGroupRidgeRegressor(decomposition=:woodb
 mljlm_ridge = RidgeRegressor(lambda=0.0, fit_intercept=false)
 
 Random.seed!(1)
-n = 100 
+n = 100
 p = 80
 X = randn(n, p)
 Xtable = MLJ.table(X);
@@ -34,7 +34,7 @@ grps = GroupedFeatures([p]);
 
 single_group_ridge_machine = machine(single_group_ridge_reg, Xtable, Y)
 single_group_ridge_woodbury_machine = machine(single_group_ridge_reg_woodbury, Xtable, Y)
-mljlm_ridge_machine = machine(mljlm_ridge, Xtable, Y) 
+mljlm_ridge_machine = machine(mljlm_ridge, Xtable, Y)
 
 fit!(single_group_ridge_machine)
 @test_broken fit!(single_group_ridge_woodbury_machine)#cannot handle 0.0
@@ -55,11 +55,11 @@ fit!(mljlm_ridge_machine)
 @test predict(single_group_ridge_machine) ≈ predict(single_group_ridge_woodbury_machine)
 
 
- 
+
 # check above with scaling/centering
 
 for scale in [false]
-     for decomposition in [:cholesky; :woodbury]    
+     for decomposition in [:cholesky; :woodbury]
           @show scale, decomposition
           Yshift = Y .+ 10.0
           Y_center = Yshift .- mean(Yshift)
@@ -91,7 +91,7 @@ loocv_ridge_machine = machine(loocv_ridge, X, Y)
 
 ## Compare against brute froce predictions
 loocv_ridge_bruteforce = TunedModel(model = single_group_ridge_reg,
-                                    tuning = Grid(resolution=loocv_ridge.tuning.resolution), 
+                                    tuning = Grid(resolution=loocv_ridge.tuning.resolution),
                                     resampling=  CV(nfolds=n),
                                     measure = l2,
                                     range = λ_range)
@@ -124,7 +124,7 @@ plot!(single_ridge_cv_curve_loo.parameter_values,
 # Let us also try with other number of folds
 
 single_ridge_cv = TunedModel(model = single_group_ridge_reg,
-                             tuning = Grid(resolution=100), 
+                             tuning = Grid(resolution=100),
                              resampling=  CV(nfolds=5),
                              measure = l2,
                              range = λ_range)
@@ -148,17 +148,17 @@ tmp_eval = evaluate!(single_group_ridge_machine, resampling=CV(nfolds=n), measur
 
 # Check multiridge
 
-multiridge = MultiGroupRidgeRegressor(GroupedFeatures([30;50]))
+multiridge = MultiGroupRidgeRegressor(;groups=GroupedFeatures([30;50]))
 loocv_multiridge = LooRidgeRegressor(ridge=multiridge, tuning=SigmaRidgeRegression.DefaultTuning(resolution=10))
 
 loocv_multiridge_mach = machine(loocv_multiridge, X, Y)
 fit!(loocv_multiridge_mach)
 
 multiridge_ranges = loocv_multiridge_mach.report.param_range
-multiridge_loo_bruteforce = TunedModel(model=multiridge, 
-                                       resampling=CV(nfolds=n), 
-                                       tuning=Grid(resolution=loocv_multiridge.tuning.resolution), 
-                                       range=multiridge_ranges, 
+multiridge_loo_bruteforce = TunedModel(model=multiridge,
+                                       resampling=CV(nfolds=n),
+                                       tuning=Grid(resolution=loocv_multiridge.tuning.resolution),
+                                       range=multiridge_ranges,
                                        measure=l2)
 
 multiridge_loo_bruteforce_machine = machine(multiridge_loo_bruteforce, X, Y)
@@ -175,7 +175,7 @@ sigmaridge = SigmaRidgeRegressor(groups=groups, σ=1.0)
 sigmaridge_machine = machine(sigmaridge, X, Y)
 fit!(sigmaridge_machine)
 
-sigmaridge_machine.cache.workspace.λs 
+sigmaridge_machine.cache.workspace.λs
 predict(sigmaridge_machine)
 
 loo_sigmaridge = LooRidgeRegressor(ridge=sigmaridge, tuning=DefaultTuning(scale=:linear))
