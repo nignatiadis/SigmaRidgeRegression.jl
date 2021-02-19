@@ -21,8 +21,12 @@ function _default_hyperparameter_maximum(
     1000 * maximum(abs.(fitted_machine.cache.XtY))
 end
 
-function _default_param_min_ratio(AbstractGroupRidgeRegressor, fitted_machine)
+function _default_param_min_ratio(ridge, fitted_machine)
     1e-6
+end
+
+function _default_scale(ridge, fitted_machine)
+    :log10
 end
 
 function _groups(m::SingleGroupRidgeRegressor, p)
@@ -167,14 +171,27 @@ function range_and_grid(ridge::MultiGroupRidgeRegressor, λ_min, λ_max, scale, 
 end
 
 
-# Autotuning code
+"""
+    DefaultTuning(resolution, n, param_min_ratio, param_max, scale)
 
+Determines the default set of hyperparameters to loop over when tuning a
+`AbstractGroupRidgeRegressor` method.  Parameters are chosen on a grid
+that is equidistant in `scale` (e.g. `:log10` or `:linear` or `:default`) with number
+of points given by `resolution` (default `100`) that ranges from `param_min_ratio*param_max` to
+`param_max`. Both `param_min_ratio` and `param_max` can be specified as `:default`,
+in which case a method specific default choice will be used.
+
+If there are multiple hyperparameters (say `d`),
+then the above rules are used componentwise. `n` (default `1000`)
+is the largest number of hyperparameters to explore (if `resolution^d > n`,
+then the parameters are randomly subsampled to `n` of them).
+"""
 Base.@kwdef struct DefaultTuning{T,M}
     resolution::Int = 100
     n::Int = 1000
     param_min_ratio::M = :default
     param_max::T = :default
-    scale = :log10
+    scale = :default
 end
 
 function _tuning_grid(tuning::DefaultTuning, model, fitted_machine, rng)
@@ -195,8 +212,14 @@ function _tuning_grid(tuning::DefaultTuning, model, fitted_machine, rng)
         error("param_min_ratio can be :default or a number only.")
     end
 
+    if tuning.scale === :default
+        _scale = _default_scale(model, fitted_machine)
+    else
+        _scale = tuning.scale
+    end
+
     param_min = param_min_ratio * param_max
-    param_range, model_grid = range_and_grid(model, param_min, param_max, scale, resolution, n, rng)
+    param_range, model_grid = range_and_grid(model, param_min, param_max, _scale, resolution, n, rng)
 
     param_range, model_grid, param_max
 end

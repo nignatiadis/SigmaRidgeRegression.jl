@@ -94,7 +94,8 @@ export GroupedFeatures,
     TunedRidgeRegressor,
     SigmaRidgeRegressor,
     GroupLassoRegressor,
-    DefaultTuning
+    DefaultTuning,
+    LooSigmaRidgeRegressor
 
 
 end # module

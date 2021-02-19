@@ -5,9 +5,14 @@ abstract type AbstractGroupRidgeRegressor <: AbstractGroupRegressor end
 function StatsBase.fit(grp_ridge::AbstractGroupRidgeRegressor, X, Y, grp::GroupedFeatures)
     decomposition = grp_ridge.decomposition
     tuning = grp_ridge.λ
-    if decomposition == :default || decomposition == :cholesky
+    nobs = length(Y)
+    if decomposition === :default
+        decomposition = (nfeatures(grp) <= 4*nobs) ? :cholesky : :woodbury
+    end
+
+    if decomposition === :cholesky
         pred = CholeskyRidgePredictor(X)
-    elseif decomposition == :woodbury
+    elseif decomposition === :woodbury
         pred = WoodburyRidgePredictor(X)
     else
         "Only :default, :cholesky and :woodbury currently supported"
