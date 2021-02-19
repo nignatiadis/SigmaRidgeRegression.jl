@@ -140,7 +140,7 @@ _groups(m::MultiGroupRidgeRegressor, p) = m.groups
 
 function MultiGroupRidgeRegressor(;
     groups::GroupedFeatures,
-    λs::AbstractVector = ones(ngr),
+    λs::AbstractVector = ones(ngroups(groups)),
     decomposition = :default,
     center = true,
     scale = true,

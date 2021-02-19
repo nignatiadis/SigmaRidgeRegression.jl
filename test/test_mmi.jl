@@ -19,8 +19,8 @@ const MMI = MLJModelInterface
 
 # Let us first test if the code works for a single predictor
 
-single_group_ridge_reg = SingleGroupRidgeRegressor(decomposition=:cholesky, λ=0.0)
-single_group_ridge_reg_woodbury = SingleGroupRidgeRegressor(decomposition=:woodbury, λ=0.0)
+single_group_ridge_reg = SingleGroupRidgeRegressor(decomposition=:cholesky, λ=0.0, center=false, scale=false)
+single_group_ridge_reg_woodbury = SingleGroupRidgeRegressor(decomposition=:woodbury, λ=0.0, center=false, scale=false)
 mljlm_ridge = RidgeRegressor(lambda=0.0, fit_intercept=false)
 
 Random.seed!(1)
@@ -70,7 +70,7 @@ for scale in [false]
           single_group_ridge_reg_centered_machine = machine(single_group_ridge_reg_centered, X, Yshift)
           fit!(single_group_ridge_reg_centered_machine)
 
-          single_group_ridge_reg_tmp = SingleGroupRidgeRegressor(decomposition=decomposition, λ=1.0)
+          single_group_ridge_reg_tmp = SingleGroupRidgeRegressor(decomposition=decomposition, λ=1.0, center=false, scale=false)
           single_group_ridge_machine_centered_data =  machine(single_group_ridge_reg_tmp, X_center, Y_center)
           fit!(single_group_ridge_machine_centered_data)
 
@@ -82,7 +82,7 @@ end
 
 # Start checking LOOCVRidgeRegressor
 
-loocv_ridge = LooRidgeRegressor()
+loocv_ridge = LooRidgeRegressor(; ridge=SingleGroupRidgeRegressor(;scale=false, center=false))
 loocv_ridge_machine = machine(loocv_ridge, X, Y)
 @time fit!(loocv_ridge_machine)
 
@@ -148,7 +148,7 @@ tmp_eval = evaluate!(single_group_ridge_machine, resampling=CV(nfolds=n), measur
 
 # Check multiridge
 
-multiridge = MultiGroupRidgeRegressor(;groups=GroupedFeatures([30;50]))
+multiridge = MultiGroupRidgeRegressor(;groups=GroupedFeatures([30;50]), center=false, scale=false)
 loocv_multiridge = LooRidgeRegressor(ridge=multiridge, tuning=SigmaRidgeRegression.DefaultTuning(resolution=10))
 
 loocv_multiridge_mach = machine(loocv_multiridge, X, Y)
@@ -163,14 +163,14 @@ multiridge_loo_bruteforce = TunedModel(model=multiridge,
 
 multiridge_loo_bruteforce_machine = machine(multiridge_loo_bruteforce, X, Y)
 fit!(multiridge_loo_bruteforce_machine)
-@test values(multiridge_loo_bruteforce_machine.report.best_model.λ) == values(loocv_multiridge_mach.report.best_param)
+@test values(multiridge_loo_bruteforce_machine.report.best_model.λs) == values(loocv_multiridge_mach.report.best_param)
 @test predict(multiridge_loo_bruteforce_machine) == predict(loocv_multiridge_mach)
 
 
 # test SigmaRidgeRegression
 
 groups = GroupedFeatures([30;50])
-sigmaridge = SigmaRidgeRegressor(groups=groups, σ=1.0)
+sigmaridge = SigmaRidgeRegressor(;groups=groups, σ=1.0, scale=false, center=false)
 
 sigmaridge_machine = machine(sigmaridge, X, Y)
 fit!(sigmaridge_machine)
@@ -178,7 +178,7 @@ fit!(sigmaridge_machine)
 sigmaridge_machine.cache.workspace.λs
 predict(sigmaridge_machine)
 
-loo_sigmaridge = LooRidgeRegressor(ridge=sigmaridge, tuning=DefaultTuning(scale=:linear))
+loo_sigmaridge = LooRidgeRegressor(;ridge=sigmaridge, tuning=DefaultTuning(scale=:linear))
 loo_sigmaridge_machine = machine(loo_sigmaridge, X, Y)
 fit!(loo_sigmaridge_machine)
 σs = loo_sigmaridge_machine.report.params
