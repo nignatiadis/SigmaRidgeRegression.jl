@@ -1,6 +1,0 @@
-[YearPredictionMSD]
-git-tree-sha1 = "4af1ba72a071431b924ddb4efc3e86a2ddf39f94"
-
-    [[YearPredictionMSD.download]]
-    sha256 = "06f801af323bb7798e800583acce4ea1ed2697ac12c23f4424aea0a7a3d09e11"
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00203/YearPredictionMSD.txt.zip"
