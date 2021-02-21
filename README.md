@@ -72,4 +72,4 @@ mean(abs2, X*βs .- predict(mach_bayes)) #4.356913540118585
 ### TODOs
 
 * Fully implement the MLJ interface.
-* Wait for the following MLJ issue to be fixed: https://github.com/alan-turing-institute/MLJBase.jl/issues/428#issuecomment-708141459, in the meantime this package uses type piracy as in the above comments to accommodate the large number of features.
+* Wait for the following MLJ issue to be fixed: https://github.com/alan-turing-institute/MLJBase.jl/issues/428#issuecomment-708141459, in the meantime this package uses type piracy as in the linked comment to accommodate a large number of features.
