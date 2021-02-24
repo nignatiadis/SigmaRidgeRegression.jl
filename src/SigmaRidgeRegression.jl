@@ -7,6 +7,7 @@ using Expectations
 using FillArrays #not used yet
 using FiniteDifferences
 using LinearAlgebra
+using MLJBase
 import MLJModelInterface
 const MMI = MLJModelInterface
 import MLJ
@@ -14,6 +15,7 @@ import MLJTuning
 using MutableNamedTuples
 
 using Random
+using Requires
 using Roots
 using Setfield
 using StatsBase
@@ -52,7 +54,12 @@ include("theoretical_risk_curves.jl")
 include("mmi.jl")
 include("mmi_sigmaridge.jl")
 include("grouplasso.jl")
+include("mmi_metadata.jl")
 include("datasets/CLLData/CLLData.jl")
+
+function __init__()
+    @require RCall="6f49c342-dc21-5d91-9882-a32aef131414" include("seagull.jl")
+end
 
 export GroupedFeatures,
     ngroups,

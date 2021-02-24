@@ -6,7 +6,7 @@ Base.@kwdef mutable struct GroupLassoRegressor{G,P,T<:Number} <: AbstractGroupRe
     center::Bool = true
     scale::Bool = true
     maxiter::Int = 100
-    η_reg::T = 1e-5
+    η_reg::T = 1e-7
     η_threshold::T = 1e-2
     abs_tol::T = 1e-4
     truncate_to_zero::Bool = true

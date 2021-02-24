@@ -27,6 +27,10 @@ Pkg.add("SigmaRidgeRegression")
 SigmaRidgeRegression.jl can be used alongside the [MLJ](https://github.com/alan-turing-institute/MLJ.jl) framework for machine learning in Julia.
 
 ```julia
+using MLJ
+using SigmaRidgeRegression
+using Random
+
 # Suppose we have three groups of features, each with n observations
 # and 25, 50 and 100 features respectively
 n = 400
@@ -53,7 +57,7 @@ groups = GroupedFeatures([p1;p2;p3])
 
 # Create MLJ machine and fit SigmaRidgeRegression:
 sigma_model = LooSigmaRidgeRegressor(;groups=groups)
-mach_sigma_model = machine(sigma_model, X, Y)
+mach_sigma_model = machine(sigma_model,  MLJ.table(X), Y)
 fit!(mach_sigma_model)
 
 # How well are we estimating the true X*βs in mean squared error?
@@ -64,7 +68,7 @@ mean(abs2, X*βs .- predict(mach_sigma_model))  # 4.612726430034071
 bayes = MultiGroupRidgeRegressor(;groups=groups, λs=λs_opt, center=false, scale=false)
 
 
-mach_bayes = machine(bayes, X, Y)
+mach_bayes = machine(bayes, MLJ.table(X), Y)
 fit!(mach_bayes)
 mean(abs2, X*βs .- predict(mach_bayes)) #4.356913540118585
 ```

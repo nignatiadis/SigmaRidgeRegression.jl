@@ -192,7 +192,7 @@ then the parameters are randomly subsampled to `n` of them).
 """
 Base.@kwdef struct DefaultTuning{T,M}
     resolution::Int = 100
-    n::Int = 1000
+    n::Int = 2000
     param_min_ratio::M = :default
     param_max::T = :default
     scale = :default
