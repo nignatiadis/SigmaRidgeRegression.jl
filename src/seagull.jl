@@ -5,7 +5,7 @@ Base.@kwdef mutable struct TunedSeagull{G,R} <: AbstractGroupRegressor
     groups::G
     center::Bool = true
     scale::Bool = true
-    param_min_ratio::Float64 = 1e-5
+    param_min_ratio::Float64 = 1e-6
     resampling::R = MLJ.CV(nfolds = 5, shuffle=true, rng=1)
     resolution::Int = 100
 end
