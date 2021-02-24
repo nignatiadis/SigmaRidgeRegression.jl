@@ -1,8 +1,8 @@
 using Pkg
 Pkg.activate(@__DIR__)
+using RCall
 using SigmaRidgeRegression
 using StatsBase
-using Plots
 using Random
 using MLJ
 using Tables
@@ -81,19 +81,17 @@ loo_multi_ridge = LooRidgeRegressor(;
     ridge=MultiGroupRidgeRegressor(; groups=groups, center=true, scale=true),
     rng=MersenneTwister(1),
 )
+
 loo_multi_ridge_noise = LooRidgeRegressor(;
     ridge=MultiGroupRidgeRegressor(; groups=groups_noise, center=true, scale=true),
     rng=MersenneTwister(1),
 )
 
-cv_glasso = TunedRidgeRegressor(;
-    ridge=GroupLassoRegressor(; groups=groups, center=true, scale=true),
-    resampling=Holdout(; shuffle=true, rng=1),
-)
-cv_glasso_noise = TunedRidgeRegressor(;
-    ridge=GroupLassoRegressor(; groups=groups_noise, center=true, scale=true),
-    resampling=Holdout(; shuffle=true, rng=1),
-)
+
+cv_glasso = TunedSeagull(;groups=groups, center=true, scale=true)
+
+cv_glasso_noise = TunedSeagull(;groups=groups_noise, center=true, scale=true)
+
 
 line_single_ridge = single_table_line(
     X_table, y, resample_ids, loo_single_ridge, "\textbf{Single Ridge}"
@@ -134,6 +132,7 @@ line_glasso = single_table_line(
     L"\textbf{Group Lasso}";
     tuning_name=L"$\widehat{\lambda}^{gl}",
 )
+
 line_glasso_noise = single_table_line(
     X_plus_noise,
     y,
