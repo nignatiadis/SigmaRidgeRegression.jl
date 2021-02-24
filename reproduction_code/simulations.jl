@@ -123,7 +123,7 @@ n = opt[:n]
 @show n
 Σ = opt[:cov]
 @show Σ
-nreps = 300
+nreps = 400
 sim = GroupRidgeSimulationSettings(;
     groups=groups,
     Σ=Σ,
