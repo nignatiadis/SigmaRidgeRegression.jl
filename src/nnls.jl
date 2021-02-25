@@ -98,7 +98,7 @@ function fnnls(
     A,
     B::AbstractMatrix;
     gram::Bool = false,
-    use_parallel::Bool = true,
+    use_parallel::Bool = false,
     kwargs...,
 )
 

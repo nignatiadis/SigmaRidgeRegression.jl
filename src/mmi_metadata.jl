@@ -1,19 +1,15 @@
 const REG_MODELS =  (
-    GroupLassoRegressor,
     SigmaRidgeRegressor,
     SingleGroupRidgeRegressor,
     MultiGroupRidgeRegressor,
     LooRidgeRegressor,
-    TunedRidgeRegressor,
 )
 
 _path(M) =  "SigmaRidgeRegression.$(MMI.name(M))"
-_descr(::Type{<:GroupLassoRegressor}) = "Group Lasso"
 _descr(::Type{<:SigmaRidgeRegressor}) = "σ-Ridge regression"
 _descr(::Type{<:SingleGroupRidgeRegressor}) = "Vanilla ridge regression"
 _descr(::Type{<:MultiGroupRidgeRegressor}) = "Group-regularized ridge regression"
 _descr(::Type{<:LooRidgeRegressor}) = "Ridge regressor tuned by leave-one-out cross-validation"
-_descr(::Type{<:TunedRidgeRegressor}) = "Tuned ridge regressor"
 
 MMI.metadata_pkg.(
     REG_MODELS,
