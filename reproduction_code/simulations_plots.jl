@@ -32,17 +32,15 @@ df.n = getfield.(df.sim, :ntrain)
 
 summary_f = x -> mean(x) .- 25 #25 is noise variance
 
-gdf = df ->
-    combine(
-        df,
-        :mse_sigma => summary_f => :mse_sigma,
-        :mse_single => summary_f => :mse_single,
-        :mse_multi => summary_f => :mse_multi,
-        :mse_glasso => summary_f => :mse_glasso,
-        :mse_bayes => summary_f => :mse_bayes,
-        nrow,
-    ) |> df -> groupby(df, [:cov, :n])(groupby(df, [:cov, :n, :K]))
 
+gdf = groupby(df, [:cov,:n ,:K]) |>
+      df -> combine(df, :mse_sigma =>  summary_f => :mse_sigma,
+                        :mse_single => summary_f  => :mse_single,
+                        :mse_multi => summary_f  => :mse_multi,
+                        :mse_glasso => summary_f  => :mse_glasso,
+                        :mse_bayes => summary_f  => :mse_bayes,
+                        nrow) |>
+      df -> groupby(df, [:cov,:n])
 
 function f_tbl(i)
     return [gdf[i].mse_single gdf[i].mse_glasso gdf[i].mse_multi gdf[i].mse_sigma gdf[i].mse_bayes]
