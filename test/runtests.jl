@@ -40,7 +40,18 @@ end
 
 
 
-
-include("test_mmi.jl")
+@testset "MMI" begin
+    include("test_mmi.jl")
+end
 #include("test_grouplasso.jl")
 include("test_covariance.jl")
+include("test_simulations.jl")
+
+@testset "Theoretical risks" begin
+    include("test_theoretical_risks.jl")
+end
+# TO ADD
+# Compare: - GroupLasso AGAINST R
+#          - Check group lasso lambda_max
+#          - test the TunedRidgeRegressor type
+#          - test σ_max  (probably won't increase coverage but...)

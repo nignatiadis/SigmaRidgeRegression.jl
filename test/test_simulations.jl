@@ -1,5 +1,6 @@
 using Random
 using MLJ
+using SigmaRidgeRegression
 
 id_design = BlockCovarianceDesign([IdentityCovarianceDesign(), IdentityCovarianceDesign()])
 ps = [100; 100]
@@ -40,7 +41,7 @@ mse = mse_ridge(
 )
 
 
-_mach = machine(multiridge, sim_res.X, sim_res.Y)
+_mach = machine(multiridge, MLJ.table(sim_res.X), sim_res.Y)
 _eval = evaluate!(_mach, resampling = sim_res.resampling_idx, measure = l2)
 
 @test _eval.measurement[1] == mse
