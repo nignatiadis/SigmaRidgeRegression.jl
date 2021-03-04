@@ -60,6 +60,7 @@ function single_table_line(
     time_loo = round(mean(ridge_benchmark.times) / (1e9); sigdigits=sigdigits)
 
     eval_ridge = evaluate!(ridge_machine; resampling=resampling, measure=rms)
+    @show eval_ridge.measurement
     _rmse = round(eval_ridge.measurement[1]; sigdigits=sigdigits)
 
     return [model_name, tuning_string, λs..., time_loo, _rmse]
@@ -120,6 +121,7 @@ line_sigma_ridge_noise = single_table_line(
 line_multi_ridge = single_table_line(
     X_table, y, resample_ids, loo_multi_ridge, "\textbf{Multi Ridge}"
 )
+
 line_multi_ridge_noise = single_table_line(
     X_plus_noise, y, resample_ids, loo_multi_ridge_noise, "\textbf{Multi Ridge}"
 )

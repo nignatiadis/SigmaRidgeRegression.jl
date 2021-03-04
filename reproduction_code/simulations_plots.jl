@@ -93,7 +93,7 @@ pl3 = plot(
     gdf[idx3].K,
     f_tbl(idx3);
     label=nothing,
-    title=L"\bSigma=\textrm{AR}(0.8),\;n=p",
+    title=L"\bSigma=\textrm{AR}(0.8),\;n=2p",
     ylim=(0, 55),
     plot_params...,
 )

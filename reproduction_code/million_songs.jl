@@ -48,11 +48,10 @@ loo_single_ridge = LooRidgeRegressor(;
 
 loo_sigmaridge = LooSigmaRidgeRegressor(; groups=groups, center=true, scale=true)
 
-multi_ridge =
-    loo_multi_ridge = LooRidgeRegressor(;
-        ridge=MultiGroupRidgeRegressor(; groups=groups, center=true, scale=true),
-        rng=MersenneTwister(1),
-    )
+loo_multi_ridge = LooRidgeRegressor(;
+    ridge=MultiGroupRidgeRegressor(; groups=groups, center=true, scale=true),
+    rng=MersenneTwister(1),
+)
 
 holdout_glasso = TunedSeagull(; groups=groups, center=true, scale=true)
 
@@ -60,10 +59,10 @@ ns_subsample = [500; 1000; 5000]
 n_montecarlo = 20
 Random.seed!(10)
 
-#an initial run to make sure everything is precompiled
 mse_array = Array{Float64}(undef, length(ns_subsample), n_montecarlo, 4)
 time_array = Array{Float64}(undef, length(ns_subsample), n_montecarlo, 4)
 λs_array = Array{Any}(undef, length(ns_subsample), n_montecarlo, 4)
+#an initial run to make sure everything is precompiled followed by n_montecarlo runs
 for n_montecarlo in [1; n_montecarlo]
 for (k, n_subsample) in enumerate(ns_subsample)
     for j in Base.OneTo(n_montecarlo)
