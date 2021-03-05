@@ -24,7 +24,6 @@ push!(PGFPlotsX.CUSTOM_PREAMBLE, raw"\newcommand{\bw}{\bm{w}}")
 sim_path = joinpath(@__DIR__, "simulation_results")
 
 all_files = FileIO.load.(joinpath.(sim_path, readdir(sim_path)))
-all_files = load("simulation_results/loaded_files.jld2")["loaded_files"]
 all_tuples = vcat((x["res"] for x in all_files)...)
 
 df = DataFrame(all_tuples)
